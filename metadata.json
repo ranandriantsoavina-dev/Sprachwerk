@@ -1,0 +1,6 @@
+{
+  "name": "SPRACHWERK — German Grammar Academy",
+  "description": "A revision-first German grammar platform (A1–C1) with configurable practice, gamified rewards, leaderboards, and offline PWA support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

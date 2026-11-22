@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --sw-black: #000000;
+    --sw-red: #DD0000;
+    --sw-gold: #FFCE00;
+  }
+
+  html, body {
+    font-family: var(--font-sans);
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Equipped shop interface theme accents (light + dark paired) */
+html[data-theme-accent="porcelain"] body,
+html[data-theme-accent="porcelain"] .sw-app-shell {
+  background-color: #faf6ee;
+}
+
+html.dark[data-theme-accent="porcelain"] body,
+html.dark[data-theme-accent="porcelain"] .sw-app-shell {
+  background-color: #13110e;
+}
+
+html[data-theme-accent="gold_archive"] .sw-accent-card {
+  border-color: rgba(255, 206, 0, 0.55);
+}
+
+/* High-tier animated cosmetic keyframes (compositor-only properties) */
+@keyframes sw-aurora-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sw-gold-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes sw-phoenix-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.08);
+  }
+}
+
+@keyframes sw-star-gleam {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.16) rotate(8deg);
+  }
+}
+
+@keyframes sw-banner-sweep {
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(160%);
+  }
+}
+
+.sw-anim-aurora {
+  animation: sw-aurora-rotate 5s linear infinite;
+}
+
+.sw-anim-halo {
+  animation: sw-gold-halo 2.4s ease-in-out infinite;
+}
+
+.sw-anim-phoenix {
+  animation: sw-phoenix-float 2.2s ease-in-out infinite;
+}
+
+.sw-anim-gleam {
+  animation: sw-star-gleam 2.4s ease-in-out infinite;
+}
+
+.sw-anim-sweep {
+  animation: sw-banner-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Reduced motion support for users or account preference */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

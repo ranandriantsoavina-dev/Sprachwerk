@@ -1,0 +1,910 @@
+import React, { useEffect, useState } from 'react';
+import {
+  Award,
+  Check,
+  Coins,
+  Download,
+  KeyRound,
+  Monitor,
+  Pencil,
+  Plus,
+  ShieldAlert,
+  ShoppingBag,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
+import {
+  isAnimatedCosmeticKey,
+  ShopItemPreview,
+  UserAvatar,
+  UserBadgeIcon,
+  UserBannerBackdrop,
+} from '../components/BrandMark';
+import { PWAInstallButton } from '../components/PWAInstallButton';
+import { useApp } from '../context/AppContext';
+import { t } from '../i18n/translations';
+import { apiRequest } from '../lib/api';
+import type { AchievementItem, InterfaceLang, ShopItem, ThemeMode } from '../types/domain';
+
+type CustomizeCategory = 'avatars' | 'frames' | 'banners' | 'badges' | 'themes';
+
+interface SessionRow {
+  id: string;
+  user_agent: string;
+  ip_prefix: string;
+  created_at: string;
+  last_seen_at: string;
+  isCurrent: boolean;
+}
+
+export const ProfileSettingsView: React.FC = () => {
+  const { user, lang, setLangLocal, theme, setThemeLocal, refreshUser, setUser, pushToast, setScreen } = useApp();
+
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [selectedLang, setSelectedLang] = useState<InterfaceLang>(lang);
+  const [selectedTheme, setSelectedTheme] = useState<ThemeMode>(theme);
+  const [timezone, setTimezone] = useState(user?.timezone || 'UTC');
+  const [leaderboardVisible, setLeaderboardVisible] = useState(user?.leaderboardVisible ?? true);
+  const [reducedMotion, setReducedMotion] = useState(user?.reducedMotion ?? false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [inventory, setInventory] = useState<ShopItem[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [customizeTab, setCustomizeTab] = useState<CustomizeCategory>('avatars');
+  const [equippingId, setEquippingId] = useState<string | null>(null);
+
+  // Security forms
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const loadExtras = async () => {
+    const [achRes, shopRes, sessRes] = await Promise.allSettled([
+      apiRequest<{ achievements: AchievementItem[] }>('/api/achievements'),
+      apiRequest<{ items: ShopItem[] }>('/api/shop'),
+      apiRequest<{ sessions: SessionRow[] }>('/api/auth/sessions'),
+    ]);
+    if (achRes.status === 'fulfilled') setAchievements(achRes.value.achievements);
+    if (shopRes.status === 'fulfilled') {
+      setInventory(shopRes.value.items.filter((it) => it.ownedQuantity > 0));
+    }
+    if (sessRes.status === 'fulfilled') setSessions(sessRes.value.sessions);
+  };
+
+  useEffect(() => {
+    loadExtras();
+  }, []);
+
+  useEffect(() => {
+    if (!showCustomizeModal) return;
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setShowCustomizeModal(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showCustomizeModal]);
+
+  useEffect(() => {
+    setSelectedLang(lang);
+  }, [lang]);
+
+  useEffect(() => {
+    setSelectedTheme(theme);
+  }, [theme]);
+
+  if (!user) return null;
+
+  const isUnlimitedCoins = user.role === 'admin' || Boolean(user.unlimitedCoins);
+  const activeBanner = user.equipped?.banner?.value;
+  const hasBanner = Boolean(activeBanner);
+  const unlockedCosmetics = inventory.filter((it) => !it.isConsumable && it.ownedQuantity > 0);
+
+  const filterByCustomizeCategory = (cat: CustomizeCategory): ShopItem[] => {
+    switch (cat) {
+      case 'avatars':
+        return unlockedCosmetics.filter((it) => it.effectType === 'avatar');
+      case 'frames':
+        return unlockedCosmetics.filter((it) => it.effectType === 'frame');
+      case 'banners':
+        return unlockedCosmetics.filter((it) => it.effectType === 'banner');
+      case 'badges':
+        return unlockedCosmetics.filter((it) => it.effectType === 'badge');
+      case 'themes':
+        return unlockedCosmetics.filter(
+          (it) => it.effectType === 'theme_accent' || it.effectType === 'celebration',
+        );
+    }
+  };
+
+  const handleSavePrefs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPrefs(true);
+    try {
+      const res = await apiRequest<{ user: typeof user }>('/api/user/profile', {
+        method: 'PATCH',
+        body: {
+          displayName: displayName.trim(),
+          interfaceLang: selectedLang,
+          theme: selectedTheme,
+          timezone: timezone.trim(),
+          leaderboardVisible,
+          reducedMotion,
+        },
+      });
+      setUser(res.user);
+      setLangLocal(res.user.interfaceLang);
+      setThemeLocal(res.user.theme);
+      pushToast(t(selectedLang, 'preferencesSavedToast'), 'success');
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Failed to save preferences.', 'error');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const handleClaimAchievement = async (ach: AchievementItem) => {
+    try {
+      const res = await apiRequest<{ coinDelta: number }>(`/api/achievements/${ach.id}/claim`, {
+        method: 'POST',
+      });
+      await Promise.all([loadExtras(), refreshUser()]);
+      pushToast(`${t(lang, 'claimedCoinsToast')}: +${res.coinDelta} ${t(lang, 'coinBalance')}`, 'reward');
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Could not claim achievement.', 'error');
+    }
+  };
+
+  const handleEquipToggle = async (item: ShopItem) => {
+    setEquippingId(item.id);
+    try {
+      await apiRequest('/api/inventory/equip', {
+        method: 'POST',
+        body: { itemId: item.id, equip: !item.equipped },
+      });
+      await Promise.all([loadExtras(), refreshUser()]);
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Failed to update equipment.', 'error');
+    } finally {
+      setEquippingId(null);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiRequest('/api/user/change-password', {
+        method: 'POST',
+        body: { currentPassword, newPassword, confirmPassword },
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      await loadExtras();
+      pushToast(t(lang, 'passwordUpdatedToast'), 'success');
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Password change failed.', 'error');
+    }
+  };
+
+  const handleRevokeSession = async (id: string) => {
+    try {
+      const res = await apiRequest<{ revokedCurrent: boolean }>(`/api/auth/sessions/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.revokedCurrent) {
+        setUser(null);
+      } else {
+        await loadExtras();
+        pushToast(t(lang, 'sessionRevokedToast'), 'info');
+      }
+    } catch {
+      pushToast('Unable to revoke session.', 'error');
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    try {
+      await apiRequest('/api/auth/sessions/revoke-other', { method: 'POST' });
+      await loadExtras();
+      pushToast(t(lang, 'otherSessionsRevokedToast'), 'info');
+    } catch {
+      pushToast('Failed to revoke other sessions.', 'error');
+    }
+  };
+
+  const handleExportJson = async () => {
+    try {
+      const token = (await import('../lib/api')).getInMemorySessionToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/user/export', { headers, credentials: 'include' });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sprachwerk-export-${user.username}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      pushToast(t(lang, 'exportFailedToast'), 'error');
+    }
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiRequest('/api/user/account', {
+        method: 'DELETE',
+        body: { password: deletePassword },
+      });
+      setUser(null);
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Account deletion failed.', 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Profile Identity Header */}
+      <section
+        className={`relative rounded-2xl border p-5 sm:p-6 overflow-hidden ${
+          hasBanner
+            ? 'border-neutral-800 bg-neutral-950'
+            : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A]'
+        }`}
+      >
+        <UserBannerBackdrop bannerKey={activeBanner} />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 min-w-0">
+          <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+            <UserAvatar
+              displayName={user.displayName}
+              avatarKey={user.equipped?.avatar?.value}
+              frameKey={user.equipped?.frame?.value}
+              size="lg"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2
+                  className={`text-lg sm:text-xl font-display font-bold break-words [overflow-wrap:anywhere] ${
+                    hasBanner ? 'text-white' : 'text-neutral-900 dark:text-white'
+                  }`}
+                >
+                  {user.displayName}
+                </h2>
+                <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
+              </div>
+              <div
+                className={`text-xs font-mono-tabular mt-0.5 break-words [overflow-wrap:anywhere] ${
+                  hasBanner ? 'text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'
+                }`}
+              >
+                @{user.username} · {user.email} · {user.role}
+              </div>
+              <div
+                className={`text-xs font-mono-tabular mt-1 ${
+                  hasBanner ? 'text-neutral-100' : 'text-neutral-700 dark:text-neutral-300'
+                }`}
+              >
+                {t(lang, 'levelShort')} {user.level.level} · {user.xpTotal} XP ·{' '}
+                {isUnlimitedCoins
+                  ? `∞ ${t(lang, 'coinBalance')}`
+                  : `${user.coinsBalance} ${t(lang, 'coinBalance')}`}{' '}
+                · {t(lang, 'streakFreezeShort')}: {user.streakFreezesAvailable}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowCustomizeModal(true)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer min-h-[44px] transition-colors ${
+                hasBanner
+                  ? 'bg-white/15 hover:bg-white/25 text-white border border-white/25 backdrop-blur-xs'
+                  : 'border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 hover:border-[#DD0000] text-neutral-900 dark:text-white'
+              }`}
+            >
+              <Pencil size={14} />
+              <span>{t(lang, 'customizeProfileBtn')}</span>
+            </button>
+            <PWAInstallButton compact />
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile Navigation Shortcuts for Secondary Views */}
+      <section className="lg:hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <button
+          type="button"
+          onClick={() => setScreen('leaderboard')}
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+        >
+          {t(lang, 'navLeaderboard')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setScreen('statistics')}
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+        >
+          {t(lang, 'navStatistics')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setScreen('lesson_practice')}
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+        >
+          {t(lang, 'navLessonPractice')}
+        </button>
+        {user.role === 'admin' && (
+          <button
+            type="button"
+            onClick={() => setScreen('admin')}
+            className="p-3 rounded-xl border border-[#DD0000]/40 bg-[#DD0000]/5 text-xs font-semibold text-[#DD0000] dark:text-[#FFCE00] text-left cursor-pointer min-h-[44px]"
+          >
+            {t(lang, 'navAdmin')}
+          </button>
+        )}
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Settings Form */}
+        <form
+          onSubmit={handleSavePrefs}
+          className="lg:col-span-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 space-y-4"
+        >
+          <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
+            {t(lang, 'profileTitle')}
+          </h3>
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              {t(lang, 'displayNameLabel')}
+            </label>
+            <input
+              type="text"
+              required
+              minLength={2}
+              maxLength={32}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                {t(lang, 'languageLabel')}
+              </label>
+              <select
+                value={selectedLang}
+                onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+              >
+                <option value="fr">Français (fr)</option>
+                <option value="en">English (en)</option>
+                <option value="de">Deutsch (de)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                {t(lang, 'themeLabel')}
+              </label>
+              <select
+                value={selectedTheme}
+                onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
+                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+              >
+                <option value="light">{t(lang, 'themeLight')}</option>
+                <option value="dark">{t(lang, 'themeDark')}</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              {t(lang, 'timezoneLabel')}
+            </label>
+            <input
+              type="text"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="Europe/Berlin"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm font-mono-tabular text-neutral-900 dark:text-white"
+            />
+          </div>
+
+          <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={leaderboardVisible}
+              onChange={(e) => setLeaderboardVisible(e.target.checked)}
+              className="accent-[#DD0000]"
+            />
+            <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
+          </label>
+
+          <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reducedMotion}
+              onChange={(e) => setReducedMotion(e.target.checked)}
+              className="accent-[#DD0000]"
+            />
+            <span>{t(lang, 'reducedMotionLabel')}</span>
+          </label>
+
+          <button
+            type="submit"
+            disabled={savingPrefs}
+            className="px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+          >
+            {savingPrefs ? t(lang, 'savingText') : t(lang, 'saveSettings')}
+          </button>
+        </form>
+
+        {/* Owned Inventory */}
+        <div className="lg:col-span-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
+              {t(lang, 'inventoryTitle')}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowCustomizeModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:border-[#DD0000] text-xs font-semibold text-neutral-900 dark:text-white cursor-pointer min-h-[36px]"
+            >
+              <Plus size={14} />
+              <span>{t(lang, 'customizeProfileBtn')}</span>
+            </button>
+          </div>
+          {inventory.length === 0 ? (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {t(lang, 'emptyInventory')}
+            </p>
+          ) : (
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-[420px] overflow-y-auto pr-1">
+              {inventory.map((item) => {
+                const animated =
+                  isAnimatedCosmeticKey(item.imageKey) || isAnimatedCosmeticKey(item.effectValue);
+                return (
+                  <div key={item.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
+                        <ShopItemPreview imageKey={item.imageKey} size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                          {item.name_i18n[lang] || item.name_i18n.en}
+                        </div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {item.isConsumable
+                            ? `${t(lang, 'quantityLabel')}: ${item.ownedQuantity}`
+                            : item.effectType === 'avatar'
+                            ? t(lang, 'effectAvatar')
+                            : item.effectType === 'frame'
+                            ? t(lang, 'effectFrame')
+                            : item.effectType === 'banner'
+                            ? t(lang, 'effectBanner')
+                            : item.effectType === 'badge'
+                            ? t(lang, 'effectBadge')
+                            : item.effectType === 'theme_accent'
+                            ? t(lang, 'effectThemeAccent')
+                            : item.effectType === 'celebration'
+                            ? t(lang, 'effectCelebration')
+                            : item.effectType.replace('_', ' ')}
+                          {animated ? ` · ${t(lang, 'animatedTierLabel')}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    {!item.isConsumable && (
+                      <button
+                        type="button"
+                        disabled={equippingId === item.id}
+                        onClick={() => handleEquipToggle(item)}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer shrink-0 min-h-[36px] ${
+                          item.equipped
+                            ? 'bg-black dark:bg-white text-white dark:text-black'
+                            : 'border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        {item.equipped && <Check size={13} />}
+                        <span>{item.equipped ? t(lang, 'unequipBtn') : t(lang, 'equipBtn')}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Achievements */}
+      <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 space-y-4">
+        <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+          <Award size={18} className="text-[#D99B00] dark:text-[#FFCE00]" />
+          <span>{t(lang, 'achievementsTitle')}</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {achievements.map((ach) => (
+            <div
+              key={ach.id}
+              className={`rounded-xl border p-4 flex flex-col justify-between gap-3 ${
+                ach.unlocked
+                  ? 'border-[#FFCE00]/60 bg-[#FFCE00]/5'
+                  : 'border-neutral-200 dark:border-neutral-800 opacity-75'
+              }`}
+            >
+              <div>
+                <div className="text-sm font-bold text-neutral-900 dark:text-white">
+                  {ach.name_i18n[lang] || ach.name_i18n.en}
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                  {ach.description_i18n[lang] || ach.description_i18n.en}
+                </p>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <span className="inline-flex items-center gap-1 text-xs font-mono-tabular font-semibold text-neutral-800 dark:text-[#FFCE00]">
+                  <Coins size={13} /> +{ach.coinReward}
+                </span>
+                {ach.claimed ? (
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    {t(lang, 'claimedLabel')}
+                  </span>
+                ) : ach.unlocked ? (
+                  <button
+                    type="button"
+                    onClick={() => handleClaimAchievement(ach)}
+                    className="px-2.5 py-1 rounded-lg bg-[#FFCE00] text-black text-xs font-bold cursor-pointer"
+                  >
+                    {t(lang, 'claimReward')}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-neutral-400">{t(lang, 'lockedLabel')}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Account Security, Sessions, JSON Export & Account Deletion */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <form
+          onSubmit={handleChangePassword}
+          className="lg:col-span-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-3"
+        >
+          <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <KeyRound size={16} />
+            <span>{t(lang, 'changePasswordTitle')}</span>
+          </h3>
+          <input
+            type="password"
+            required
+            placeholder={t(lang, 'currentPasswordPlaceholder')}
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder={t(lang, 'newPasswordMinPlaceholder')}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder={t(lang, 'confirmNewPasswordPlaceholder')}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer min-h-[42px]"
+          >
+            {t(lang, 'updatePasswordBtn')}
+          </button>
+        </form>
+
+        <div className="lg:col-span-7 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <Monitor size={16} />
+              <span>{t(lang, 'activeSessionsTitle')}</span>
+            </h3>
+            <button
+              type="button"
+              onClick={handleRevokeOtherSessions}
+              className="text-xs font-semibold text-[#DD0000] hover:underline cursor-pointer"
+            >
+              {t(lang, 'revokeOthers')}
+            </button>
+          </div>
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-48 overflow-y-auto">
+            {sessions.map((s) => (
+              <div key={s.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div className="min-w-0">
+                  <div className="font-medium text-neutral-900 dark:text-white truncate">
+                    {s.isCurrent ? t(lang, 'currentSessionLabel') : t(lang, 'activeSessionLabel')} · {s.ip_prefix || 'local'}
+                  </div>
+                  <div className="text-neutral-500 truncate">{s.user_agent || t(lang, 'browserLabel')}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRevokeSession(s.id)}
+                  className="text-neutral-500 hover:text-[#DD0000] font-semibold shrink-0 cursor-pointer"
+                >
+                  {t(lang, 'revokeBtn')}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleExportJson}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white cursor-pointer min-h-[40px]"
+            >
+              <Download size={14} />
+              <span>{t(lang, 'exportJsonBtn')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DD0000] cursor-pointer"
+            >
+              <Trash2 size={14} />
+              <span>{t(lang, 'deleteAccountBtn')}</span>
+            </button>
+          </div>
+
+          {showDeleteConfirm && (
+            <form onSubmit={handleDeleteAccount} className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
+                <ShieldAlert size={15} className="shrink-0" />
+                <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="password"
+                  required
+                  placeholder={t(lang, 'deletePasswordPlaceholder')}
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer"
+                >
+                  {t(lang, 'confirmDeleteBtn')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* Profile Customization Modal */}
+      {showCustomizeModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => setShowCustomizeModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="customize-modal-title"
+        >
+          <div
+            className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-start justify-between gap-3 shrink-0">
+              <div className="min-w-0">
+                <h3
+                  id="customize-modal-title"
+                  className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2"
+                >
+                  <Sparkles size={18} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
+                  <span>{t(lang, 'customizeModalTitle')}</span>
+                </h3>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                  {t(lang, 'customizeModalDesc')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomizeModal(false)}
+                aria-label={t(lang, 'close')}
+                className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Live Preview Strip */}
+            <div className="px-5 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800 shrink-0 space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                {t(lang, 'livePreviewLabel')}
+              </div>
+              <div
+                className={`relative rounded-xl border p-4 overflow-hidden ${
+                  hasBanner
+                    ? 'border-neutral-800 bg-neutral-950'
+                    : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900'
+                }`}
+              >
+                <UserBannerBackdrop bannerKey={activeBanner} compact />
+                <div className="relative z-10 flex items-center gap-3.5 min-w-0">
+                  <UserAvatar
+                    displayName={user.displayName}
+                    avatarKey={user.equipped?.avatar?.value}
+                    frameKey={user.equipped?.frame?.value}
+                    size="lg"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`text-base font-display font-bold truncate ${
+                          hasBanner ? 'text-white' : 'text-neutral-900 dark:text-white'
+                        }`}
+                      >
+                        {user.displayName}
+                      </span>
+                      <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
+                    </div>
+                    <div
+                      className={`text-xs font-mono-tabular mt-0.5 ${
+                        hasBanner ? 'text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'
+                      }`}
+                    >
+                      @{user.username} · {t(lang, 'levelShort')} {user.level.level} · {user.xpTotal} XP
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
+                {(
+                  [
+                    { id: 'avatars', label: t(lang, 'customizeCatAvatars') },
+                    { id: 'frames', label: t(lang, 'customizeCatFrames') },
+                    { id: 'banners', label: t(lang, 'customizeCatBanners') },
+                    { id: 'badges', label: t(lang, 'customizeCatBadges') },
+                    { id: 'themes', label: t(lang, 'customizeCatThemes') },
+                  ] as Array<{ id: CustomizeCategory; label: string }>
+                ).map((tab) => {
+                  const count = filterByCustomizeCategory(tab.id).length;
+                  const active = customizeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setCustomizeTab(tab.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer min-h-[40px] transition-colors ${
+                        active
+                          ? 'bg-black dark:bg-white text-white dark:text-black'
+                          : 'border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400'
+                      }`}
+                    >
+                      {tab.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Category Inventory Items */}
+            <div className="p-5 overflow-y-auto flex-1">
+              {(() => {
+                const items = filterByCustomizeCategory(customizeTab);
+                if (items.length === 0) {
+                  return (
+                    <div className="py-10 text-center space-y-3">
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                        {t(lang, 'emptyCategoryMsg')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomizeModal(false);
+                          setScreen('shop');
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[44px]"
+                      >
+                        <ShoppingBag size={15} />
+                        <span>{t(lang, 'browseShopBtn')}</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {items.map((item) => {
+                      const animated =
+                        isAnimatedCosmeticKey(item.imageKey) ||
+                        isAnimatedCosmeticKey(item.effectValue);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
+                            item.equipped
+                              ? 'border-[#DD0000] bg-[#DD0000]/[0.03] dark:bg-[#FFCE00]/[0.04] dark:border-[#FFCE00]/60'
+                              : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
+                              <ShopItemPreview imageKey={item.imageKey} size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-bold text-neutral-900 dark:text-white leading-snug">
+                                {item.name_i18n[lang] || item.name_i18n.en}
+                              </div>
+                              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                {item.effectType === 'avatar'
+                                  ? t(lang, 'effectAvatar')
+                                  : item.effectType === 'frame'
+                                  ? t(lang, 'effectFrame')
+                                  : item.effectType === 'banner'
+                                  ? t(lang, 'effectBanner')
+                                  : item.effectType === 'badge'
+                                  ? t(lang, 'effectBadge')
+                                  : item.effectType === 'theme_accent'
+                                  ? t(lang, 'effectThemeAccent')
+                                  : t(lang, 'effectCelebration')}
+                                {animated ? ` · ${t(lang, 'animatedTierLabel')}` : ''}
+                              </div>
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                                {item.description_i18n[lang] || item.description_i18n.en}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={equippingId === item.id}
+                            onClick={() => handleEquipToggle(item)}
+                            className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer min-h-[44px] transition-colors ${
+                              item.equipped
+                                ? 'bg-black dark:bg-white text-white dark:text-black'
+                                : 'border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white'
+                            }`}
+                          >
+                            {item.equipped && <Check size={14} />}
+                            <span>{item.equipped ? t(lang, 'unequipBtn') : t(lang, 'equipBtn')}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

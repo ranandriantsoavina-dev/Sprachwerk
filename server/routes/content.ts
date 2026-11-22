@@ -1,0 +1,432 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { Router, type Response } from 'express';
+import type { DatabaseSync } from 'node:sqlite';
+import {
+  awardRewardEvent,
+  getGamificationConfig,
+  getLocalDateString,
+  recordQualifyingStudyActivity,
+} from '../gamification.ts';
+import { requireAuth, type AuthenticatedRequest } from '../security.ts';
+
+const CONTENT_DIR = path.resolve(process.cwd(), 'data', 'content');
+
+function readDatasetFile<T>(filename: string): T[] {
+  const filePath = path.join(CONTENT_DIR, filename);
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface LessonRecord {
+  id: string;
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+  unit: number;
+  title_de: string;
+  topic: string;
+  objectives: Record<string, string>;
+  explanation_i18n: Record<string, string>;
+  rules: unknown[];
+  examples_de: unknown[];
+  common_mistakes: unknown[];
+}
+
+export interface QuestionRecord {
+  id: string;
+  lesson_ids: string[];
+  topic_tags: string[];
+  cefr_level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  difficulty: 'easy' | 'medium' | 'difficult' | 'extreme';
+  type:
+    | 'multiple_choice'
+    | 'gap_fill'
+    | 'sentence_construction'
+    | 'translation'
+    | 'matching'
+    | 'transformation'
+    | 'true_false'
+    | 'error_correction';
+  prompt_de: string;
+  options_de?: string[];
+  accepted_answers: string[];
+  solution: string;
+  explanation_i18n: Record<string, string>;
+}
+
+export interface FlashcardRecord {
+  id: string;
+  deck: string;
+  german_front: string;
+  localized_meaning: Record<string, string>;
+  usage_note?: Record<string, string>;
+  example_de?: string;
+}
+
+export function createContentRouter(db: DatabaseSync) {
+  const router = Router();
+
+  router.get('/content/status', (_req, res: Response) => {
+    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const questions = readDatasetFile<QuestionRecord>('questions.json');
+    const flashcards = readDatasetFile<FlashcardRecord>('flashcards.json');
+
+    res.json({
+      plannedLessons: 180,
+      lessonsCount: lessons.length,
+      questionsCount: questions.length,
+      flashcardsCount: flashcards.length,
+      comingSoon: lessons.length === 0 && questions.length === 0 && flashcards.length === 0,
+    });
+  });
+
+  router.get('/content/lessons', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const level = String(req.query.level || '').toUpperCase();
+    const topic = String(req.query.topic || '').toLowerCase();
+    const q = String(req.query.q || '').toLowerCase().trim();
+
+    const progressRows = db
+      .prepare('SELECT lesson_id, bookmarked, first_completed_at, review_count FROM lesson_progress WHERE user_id = ?')
+      .all(req.authUser!.id) as Array<{
+      lesson_id: string;
+      bookmarked: number;
+      first_completed_at: string | null;
+      review_count: number;
+    }>;
+    const progressMap = new Map(progressRows.map((r) => [r.lesson_id, r]));
+
+    let filtered = lessons;
+    if (level && level !== 'ALL') {
+      filtered = filtered.filter((l) => l.level === level);
+    }
+    if (topic && topic !== 'all') {
+      filtered = filtered.filter((l) => l.topic.toLowerCase() === topic);
+    }
+    if (q) {
+      filtered = filtered.filter(
+        (l) => l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q)
+      );
+    }
+
+    res.json({
+      comingSoon: lessons.length === 0,
+      plannedTotal: 180,
+      totalAvailable: lessons.length,
+      items: filtered.map((l) => ({
+        ...l,
+        progress: progressMap.get(l.id) || {
+          bookmarked: 0,
+          first_completed_at: null,
+          review_count: 0,
+        },
+      })),
+    });
+  });
+
+  router.get('/content/lessons/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const lesson = lessons.find((l) => l.id === req.params.id);
+    if (!lesson) {
+      res.status(404).json({
+        comingSoon: lessons.length === 0,
+        error: lessons.length === 0 ? 'Curriculum dataset is coming soon.' : 'Lesson not found.',
+      });
+      return;
+    }
+
+    const questions = readDatasetFile<QuestionRecord>('questions.json').filter((q) =>
+      q.lesson_ids.includes(lesson.id)
+    );
+    const availableTypes = Array.from(new Set(questions.map((q) => q.type)));
+    const availableDifficulties = Array.from(new Set(questions.map((q) => q.difficulty)));
+
+    const prog = db
+      .prepare('SELECT bookmarked, first_completed_at, last_reviewed_at, review_count FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
+      .get(req.authUser!.id, lesson.id);
+
+    res.json({
+      lesson,
+      availableTypes,
+      availableDifficulties,
+      linkedQuestionCount: questions.length,
+      progress: prog || { bookmarked: 0, first_completed_at: null, last_reviewed_at: null, review_count: 0 },
+    });
+  });
+
+  router.post('/lessons/:id/bookmark', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const { bookmarked } = req.body || {};
+    const flag = bookmarked ? 1 : 0;
+    db.prepare(
+      `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked) VALUES (?, ?, ?)
+       ON CONFLICT(user_id, lesson_id) DO UPDATE SET bookmarked = excluded.bookmarked`
+    ).run(req.authUser!.id, req.params.id, flag);
+    res.json({ ok: true, bookmarked: Boolean(flag) });
+  });
+
+  router.post('/lessons/:id/complete', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const lesson = lessons.find((l) => l.id === req.params.id);
+    if (!lesson) {
+      res.status(404).json({ error: 'Lesson dataset not yet available.' });
+      return;
+    }
+
+    const userId = req.authUser!.id;
+    const cfg = getGamificationConfig(db);
+    const nowIso = new Date().toISOString();
+    const localDate = getLocalDateString(req.authUser!.timezone);
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const existing = db
+        .prepare('SELECT first_completed_at, last_reviewed_at FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
+        .get(userId, lesson.id) as { first_completed_at: string | null; last_reviewed_at: string | null } | undefined;
+
+      if (!existing || !existing.first_completed_at) {
+        db.prepare(
+          `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked, first_completed_at, last_reviewed_at, review_count)
+           VALUES (?, ?, 0, ?, ?, 1)
+           ON CONFLICT(user_id, lesson_id) DO UPDATE SET first_completed_at = COALESCE(first_completed_at, excluded.first_completed_at), last_reviewed_at = excluded.last_reviewed_at, review_count = review_count + 1`
+        ).run(userId, lesson.id, nowIso, nowIso);
+
+        const reward = awardRewardEvent(db, {
+          userId,
+          actionType: 'lesson_first_complete',
+          xpDelta: cfg.xpPerLessonFirst,
+          coinDelta: cfg.coinsPerLessonFirst,
+          referenceId: lesson.id,
+          idempotencyKey: `lesson_first:${userId}:${lesson.id}`,
+          localDate,
+        });
+        db.exec('COMMIT');
+        res.json({ firstCompletion: true, xpAwarded: reward.xpDelta, coinsAwarded: reward.coinDelta });
+        return;
+      }
+
+      // Daily lesson review (once per calendar day per lesson)
+      db.prepare(
+        `UPDATE lesson_progress SET last_reviewed_at = ?, review_count = review_count + 1 WHERE user_id = ? AND lesson_id = ?`
+      ).run(nowIso, userId, lesson.id);
+
+      const reward = awardRewardEvent(db, {
+        userId,
+        actionType: 'lesson_review',
+        xpDelta: cfg.xpPerLessonReview,
+        coinDelta: 0,
+        referenceId: lesson.id,
+        idempotencyKey: `lesson_review:${userId}:${lesson.id}:${localDate}`,
+        localDate,
+      });
+      db.exec('COMMIT');
+      res.json({ firstCompletion: false, xpAwarded: reward.xpDelta, coinsAwarded: reward.coinDelta });
+    } catch (err) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // ignore
+      }
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to record lesson completion.' });
+    }
+  });
+
+  router.post('/content/practice/query', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const { mode, topics = [], lessonIds = [], types = [], difficulty, count = 10, order = 'shuffled' } =
+      req.body || {};
+
+    const questions = readDatasetFile<QuestionRecord>('questions.json');
+    if (questions.length === 0) {
+      res.json({
+        comingSoon: true,
+        items: [],
+        availabilityNote: null,
+      });
+      return;
+    }
+
+    let pool = questions;
+    if (mode === 'lesson' && Array.isArray(lessonIds) && lessonIds.length > 0) {
+      pool = pool.filter((q) => q.lesson_ids.some((id) => lessonIds.includes(id)));
+    } else if (Array.isArray(topics) && topics.length > 0 && !topics.includes('mixed')) {
+      pool = pool.filter((q) => q.topic_tags.some((t) => topics.includes(t)));
+    }
+
+    if (difficulty) {
+      pool = pool.filter((q) => q.difficulty === difficulty);
+    }
+    if (Array.isArray(types) && types.length > 0) {
+      pool = pool.filter((q) => types.includes(q.type));
+    }
+
+    const availabilityNote =
+      pool.length === 0
+        ? 'No questions match the selected exercise types and difficulty for this topic/lesson.'
+        : null;
+
+    let selected = [...pool];
+    if (order === 'shuffled') {
+      for (let i = selected.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(0, i + 1);
+        [selected[i], selected[j]] = [selected[j], selected[i]];
+      }
+    }
+
+    selected = selected.slice(0, Math.max(1, Math.min(50, Number(count) || 10)));
+    res.json({
+      comingSoon: false,
+      items: selected,
+      availabilityNote,
+    });
+  });
+
+  router.get('/content/flashcards', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const cards = readDatasetFile<FlashcardRecord>('flashcards.json');
+    const deck = String(req.query.deck || '');
+    const filtered = deck && deck !== 'all' ? cards.filter((c) => c.deck === deck) : cards;
+
+    res.json({
+      comingSoon: cards.length === 0,
+      items: filtered,
+      decks: Array.from(new Set(cards.map((c) => c.deck))),
+    });
+  });
+
+  router.post('/practice/submit', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.authUser!.id;
+    const {
+      mode,
+      selectedTopics = [],
+      selectedLessons = [],
+      parameters = {},
+      results = [],
+      elapsedSeconds = 0,
+      idempotencyKey,
+    } = req.body || {};
+
+    if (typeof idempotencyKey !== 'string' || !idempotencyKey) {
+      res.status(400).json({ error: 'Session idempotencyKey is required.' });
+      return;
+    }
+
+    const existing = db
+      .prepare('SELECT id, xp_awarded, coins_awarded FROM practice_sessions WHERE idempotency_key = ?')
+      .get(idempotencyKey) as { id: string; xp_awarded: number; coins_awarded: number } | undefined;
+
+    if (existing) {
+      res.json({
+        sessionId: existing.id,
+        xpAwarded: existing.xp_awarded,
+        coinsAwarded: existing.coins_awarded,
+        duplicateIgnored: true,
+      });
+      return;
+    }
+
+    const safeResults = Array.isArray(results) ? results : [];
+    const totalQuestions = safeResults.length;
+    const correctCount = safeResults.filter((r) => Boolean(r?.isCorrect)).length;
+    const skippedCount = safeResults.filter((r) => Boolean(r?.skipped)).length;
+    const timedOutCount = safeResults.filter((r) => Boolean(r?.timedOut)).length;
+    const incorrectCount = Math.max(0, totalQuestions - correctCount - skippedCount - timedOutCount);
+    const answeredCount = totalQuestions - skippedCount - timedOutCount;
+
+    if (answeredCount <= 0) {
+      res.status(400).json({ error: 'Cannot award rewards for an empty or unanswered session.' });
+      return;
+    }
+
+    const cfg = getGamificationConfig(db);
+    let xp = correctCount * cfg.xpPerQuestionCorrect;
+    let coins = 0;
+
+    if (answeredCount >= cfg.minQuestionsForSessionReward) {
+      xp += cfg.xpPerSessionComplete;
+      coins += cfg.coinsPerSessionComplete;
+      if (correctCount === answeredCount) {
+        xp += cfg.xpPerPerfectSession;
+      }
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const streak = recordQualifyingStudyActivity(db, userId, req.authUser!.timezone);
+      let dailyBonusXp = 0;
+      let dailyBonusCoins = 0;
+
+      if (streak.isFirstStudyOfDay) {
+        const daily = awardRewardEvent(db, {
+          userId,
+          actionType: 'daily_first_study',
+          xpDelta: cfg.xpPerDailyFirstStudy,
+          coinDelta: cfg.coinsPerDailyFirstStudy,
+          idempotencyKey: `daily:${userId}:${streak.localDate}`,
+          localDate: streak.localDate,
+        });
+        dailyBonusXp = daily.xpDelta;
+        dailyBonusCoins = daily.coinDelta;
+      }
+
+      const sessionId = crypto.randomUUID();
+      db.prepare(
+        `INSERT INTO practice_sessions
+         (id, user_id, mode, selected_topics_json, selected_lessons_json, parameters_json,
+          total_questions, correct_count, incorrect_count, skipped_count, timed_out_count,
+          elapsed_seconds, results_json, xp_awarded, coins_awarded, idempotency_key, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        sessionId,
+        userId,
+        mode === 'lesson' ? 'lesson' : 'general',
+        JSON.stringify(selectedTopics),
+        JSON.stringify(selectedLessons),
+        JSON.stringify(parameters),
+        totalQuestions,
+        correctCount,
+        incorrectCount,
+        skippedCount,
+        timedOutCount,
+        Math.max(0, Number(elapsedSeconds) || 0),
+        JSON.stringify(safeResults),
+        xp,
+        coins,
+        idempotencyKey,
+        new Date().toISOString()
+      );
+
+      const sessionReward = awardRewardEvent(db, {
+        userId,
+        actionType: 'practice_session',
+        xpDelta: xp,
+        coinDelta: coins,
+        referenceId: sessionId,
+        idempotencyKey: `reward:${idempotencyKey}`,
+        localDate: streak.localDate,
+      });
+
+      db.exec('COMMIT');
+      res.status(201).json({
+        sessionId,
+        xpAwarded: sessionReward.xpDelta,
+        coinsAwarded: sessionReward.coinDelta,
+        dailyBonusXp,
+        dailyBonusCoins,
+        streak,
+      });
+    } catch (err) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // ignore
+      }
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to submit session.' });
+    }
+  });
+
+  return router;
+}

@@ -1,0 +1,23 @@
+name = "sprachwerk-academy"
+main = "server.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sprachwerk-db"
+database_id = "YOUR_CLOUDFLARE_D1_DATABASE_ID"
+
+[vars]
+APP_URL = "https://sprachwerk.pages.dev"
+
+# Configure these via `wrangler secret put`:
+# - SESSION_SECRET
+# - MAILTRAP_API_TOKEN
+# - MAILTRAP_SENDER_EMAIL
+# - MAILTRAP_SANDBOX_INBOX_ID (optional for development/testing)
+# - ADMIN_PASSCODE (optional for initial admin setup)

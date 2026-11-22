@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0A0B0E"/>
+  <!-- Architectural German Triad Bars -->
+  <rect x="96" y="112" width="320" height="44" rx="8" fill="#FFFFFF"/>
+  <rect x="96" y="176" width="320" height="44" rx="8" fill="#DD0000"/>
+  <rect x="96" y="240" width="320" height="44" rx="8" fill="#FFCE00"/>
+  <!-- Geometric Monogram SW -->
+  <path d="M104 340h304v56H104z" fill="#181B22"/>
+  <text x="256" y="382" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="38" letter-spacing="8" fill="#FFFFFF">SW</text>
+</svg>
