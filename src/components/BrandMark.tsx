@@ -15,26 +15,63 @@ import {
   User,
 } from 'lucide-react';
 
-export const BrandMark: React.FC<{ size?: 'sm' | 'md'; className?: string; onDark?: boolean }> = ({
-  size = 'md',
-  className = '',
-  onDark = false,
-}) => {
-  const boxSize = size === 'sm' ? 'w-[17px] h-[17px]' : 'w-[20px] h-[20px]';
-  const barH = size === 'sm' ? 'h-[3px]' : 'h-[4px]';
-  const darkSurface = onDark
-    ? 'bg-white rounded-[3px]'
-    : 'dark:bg-white dark:rounded-[3px]';
+export const BrandMark: React.FC<{
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  onDark?: boolean;
+}> = ({ size = 'md', className = '', onDark = false }) => {
+  const boxSize =
+    size === 'sm' ? 'w-[18px] h-[18px]' : size === 'lg' ? 'w-9 h-9' : 'w-[22px] h-[22px]';
+
+  const bar1Class = onDark
+    ? 'fill-transparent stroke-[#F4F4F5]'
+    : 'fill-black stroke-none dark:fill-transparent dark:stroke-[#F4F4F5]';
+  const bar2Class = onDark
+    ? 'fill-transparent stroke-[#DD0000]'
+    : 'fill-[#DD0000] stroke-none dark:fill-transparent dark:stroke-[#DD0000]';
+  const bar3Class = onDark
+    ? 'fill-transparent stroke-[#FFCE00]'
+    : 'fill-[#FFCE00] stroke-none dark:fill-transparent dark:stroke-[#FFCE00]';
 
   return (
-    <span
-      className={`inline-flex flex-col justify-center gap-[2px] p-[2px] ${boxSize} shrink-0 ${darkSurface} ${className}`}
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`${boxSize} shrink-0 ${className}`}
       aria-hidden="true"
     >
-      <span className={`w-full ${barH} rounded-[1px] bg-black block shrink-0`} />
-      <span className={`w-full ${barH} rounded-[1px] bg-[#DD0000] block shrink-0`} />
-      <span className={`w-full ${barH} rounded-[1px] bg-[#FFCE00] block shrink-0`} />
-    </span>
+      <rect
+        x="2"
+        y="3"
+        width="20"
+        height="4.5"
+        rx="1.5"
+        strokeWidth={1.75}
+        strokeLinejoin="round"
+        className={bar1Class}
+      />
+      <rect
+        x="2"
+        y="9.75"
+        width="20"
+        height="4.5"
+        rx="1.5"
+        strokeWidth={1.75}
+        strokeLinejoin="round"
+        className={bar2Class}
+      />
+      <rect
+        x="2"
+        y="16.5"
+        width="20"
+        height="4.5"
+        rx="1.5"
+        strokeWidth={1.75}
+        strokeLinejoin="round"
+        className={bar3Class}
+      />
+    </svg>
   );
 };
 

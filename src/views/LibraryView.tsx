@@ -9,17 +9,10 @@ import {
   Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { LESSONS_CATALOG, LEVEL_STRUCTURE, formatLessonNumber } from '../data/lessonsCatalog';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
 import type { Lesson } from '../types/domain';
-
-const CEFR_BANDS = [
-  { level: 'A1', nameKey: 'cefrA1Name', plannedUnits: 36 },
-  { level: 'A2', nameKey: 'cefrA2Name', plannedUnits: 36 },
-  { level: 'B1', nameKey: 'cefrB1Name', plannedUnits: 36 },
-  { level: 'B2', nameKey: 'cefrB2Name', plannedUnits: 36 },
-  { level: 'C1', nameKey: 'cefrC1Name', plannedUnits: 36 },
-];
 
 export const LibraryView: React.FC = () => {
   const {
@@ -32,8 +25,7 @@ export const LibraryView: React.FC = () => {
     pushToast,
   } = useApp();
 
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [comingSoon, setComingSoon] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>(LESSONS_CATALOG);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState('ALL');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
@@ -43,15 +35,20 @@ export const LibraryView: React.FC = () => {
   const loadLessons = async () => {
     try {
       const res = await apiRequest<{ comingSoon: boolean; items: Lesson[] }>('/api/content/lessons');
-      setComingSoon(res.comingSoon || res.items.length === 0);
-      setLessons(res.items);
+      const items = res.items.length > 0 ? res.items : LESSONS_CATALOG;
+      setLessons(items);
       if (selectedLessonIdForDetail) {
-        const found = res.items.find((l) => l.id === selectedLessonIdForDetail);
+        const found = items.find((l) => l.id === selectedLessonIdForDetail);
         if (found) setActiveLesson(found);
         setSelectedLessonIdForDetail(null);
       }
     } catch {
-      setComingSoon(true);
+      setLessons(LESSONS_CATALOG);
+      if (selectedLessonIdForDetail) {
+        const found = LESSONS_CATALOG.find((l) => l.id === selectedLessonIdForDetail);
+        if (found) setActiveLesson(found);
+        setSelectedLessonIdForDetail(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,8 +98,60 @@ export const LibraryView: React.FC = () => {
     }
   };
 
-  // 7-part Lesson Detail Viewer (Screen 06 from PDF Section 10)
   if (activeLesson) {
+    const levelMeta = LEVEL_STRUCTURE.find((s) => s.level === activeLesson.level);
+
+    // Placeholder view when lesson content is not yet populated
+    if (!activeLesson.hasContent) {
+      return (
+        <div className="max-w-3xl space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveLesson(null)}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer min-h-[40px]"
+            >
+              <ArrowLeft size={16} />
+              <span>{t(lang, 'backToLibraryBtn')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleBookmark(activeLesson)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-medium cursor-pointer min-h-[40px]"
+            >
+              {activeLesson.progress?.bookmarked ? (
+                <BookmarkCheck size={15} className="text-[#DD0000]" />
+              ) : (
+                <Bookmark size={15} />
+              )}
+              <span>{t(lang, 'bookmarkBtn')}</span>
+            </button>
+          </div>
+
+          <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 space-y-6">
+            <header className="border-b border-neutral-200 dark:border-neutral-800 pb-5">
+              <div className="text-xs font-mono-tabular font-semibold text-neutral-500 dark:text-neutral-400 mb-2">
+                {levelMeta ? levelMeta.title : activeLesson.level} · #{formatLessonNumber(activeLesson.unit)}
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white">
+                {activeLesson.title_de}
+              </h2>
+            </header>
+
+            <div className="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 sm:p-8 text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#DD0000]/10 text-[#DD0000] dark:text-[#FFCE00] mb-1">
+                <Layers size={20} />
+              </div>
+              <p className="text-base font-display font-semibold text-neutral-900 dark:text-white">
+                Lesson content coming soon
+              </p>
+            </div>
+          </article>
+        </div>
+      );
+    }
+
     const hasLangExp = Boolean(activeLesson.explanation_i18n[lang]);
     const explanationText =
       activeLesson.explanation_i18n[lang] ||
@@ -157,7 +206,7 @@ export const LibraryView: React.FC = () => {
         <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 space-y-8">
           <header className="border-b border-neutral-200 dark:border-neutral-800 pb-5">
             <div className="text-xs font-mono-tabular text-neutral-500 mb-2">
-              {activeLesson.level} · {t(lang, 'unitLabel')} {activeLesson.unit} · {activeLesson.topic}
+              {activeLesson.level} · #{formatLessonNumber(activeLesson.unit)} · {activeLesson.topic}
             </div>
             <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white">
               {activeLesson.title_de}
@@ -272,11 +321,21 @@ export const LibraryView: React.FC = () => {
     if (levelFilter !== 'ALL' && l.level !== levelFilter) return false;
     if (bookmarkedOnly && !l.progress?.bookmarked) return false;
     if (search.trim()) {
-      const q = search.toLowerCase();
-      return l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q);
+      const q = search.toLowerCase().trim();
+      const num = formatLessonNumber(l.unit);
+      return (
+        (l.title_en || '').toLowerCase().includes(q) ||
+        l.title_de.toLowerCase().includes(q) ||
+        l.topic.toLowerCase().includes(q) ||
+        num.includes(q)
+      );
     }
     return true;
   });
+
+  const visibleLevels = LEVEL_STRUCTURE.filter(
+    (section) => levelFilter === 'ALL' || section.level === levelFilter
+  );
 
   return (
     <div className="space-y-6">
@@ -333,63 +392,101 @@ export const LibraryView: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
+      {loading && lessons.length === 0 ? (
         <div className="h-44 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] animate-pulse" />
-      ) : comingSoon ? (
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#DD0000] dark:text-[#FFCE00] mb-3">
-              <Layers size={15} />
-              <span>{t(lang, 'comingSoonBadge')}</span>
-            </div>
-            <h3 className="text-xl font-display font-bold text-neutral-900 dark:text-white mb-2">
-              {t(lang, 'comingSoonLessonsTitle')}
-            </h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-              {t(lang, 'comingSoonLessonsBody')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {CEFR_BANDS.filter((b) => levelFilter === 'ALL' || b.level === levelFilter).map((band) => (
-              <div
-                key={band.level}
-                className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
-              >
-                <div className="text-xs font-mono-tabular font-bold text-[#DD0000] dark:text-[#FFCE00]">
-                  {band.level}
-                </div>
-                <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-1">
-                  {t(lang, band.nameKey)}
-                </div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 font-mono-tabular">
-                  {band.plannedUnits} {t(lang, 'plannedLessonsSuffix')}
-                </div>
-              </div>
-            ))}
-          </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-8 text-center space-y-3">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300">
+            No lessons match the current filter.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setLevelFilter('ALL');
+              setBookmarkedOnly(false);
+              setSearch('');
+            }}
+            className="px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white cursor-pointer"
+          >
+            Reset filters
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((lesson) => (
-            <button
-              key={lesson.id}
-              type="button"
-              onClick={() => setActiveLesson(lesson)}
-              className="text-left rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 hover:border-[#DD0000] transition-colors cursor-pointer"
-            >
-              <div className="flex items-center justify-between text-xs font-mono-tabular text-neutral-500 mb-2">
-                <span>
-                  {lesson.level} · {t(lang, 'unitLabel')} {lesson.unit}
-                </span>
-                {lesson.progress?.bookmarked ? <BookmarkCheck size={14} className="text-[#DD0000]" /> : null}
-              </div>
-              <div className="text-base font-display font-bold text-neutral-900 dark:text-white break-words">
-                {lesson.title_de}
-              </div>
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{lesson.topic}</div>
-            </button>
-          ))}
+        <div className="space-y-8">
+          {visibleLevels.map((section) => {
+            const sectionLessons = filtered.filter((l) => l.level === section.level);
+            if (sectionLessons.length === 0) return null;
+
+            return (
+              <section key={section.level} className="space-y-3">
+                {/* Level Section Header */}
+                <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-black dark:bg-white text-white dark:text-black text-xs font-mono-tabular font-bold">
+                        {section.level}
+                      </span>
+                      <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white">
+                        {section.title}
+                      </h3>
+                    </div>
+                    <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 mt-1.5">
+                      {section.subtitle}
+                    </p>
+                  </div>
+                  <div className="text-xs font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] whitespace-nowrap shrink-0">
+                    {sectionLessons.length === section.lessonCount
+                      ? `${section.lessonCount} lessons`
+                      : `${sectionLessons.length} / ${section.lessonCount} lessons`}
+                  </div>
+                </div>
+
+                {/* Lessons Grid for Level */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {sectionLessons.map((lesson) => (
+                    <div
+                      key={lesson.id}
+                      className="group relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 transition-colors flex items-stretch"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setActiveLesson(lesson)}
+                        className="flex-1 text-left p-4 sm:p-5 pr-11 cursor-pointer min-w-0"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-mono-tabular text-neutral-500 dark:text-neutral-400 mb-1.5">
+                          <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                            {formatLessonNumber(lesson.unit)}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span>{lesson.level}</span>
+                        </div>
+                        <div className="text-sm sm:text-base font-display font-bold text-neutral-900 dark:text-white break-words leading-snug">
+                          {lesson.title_de}
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleBookmark(lesson);
+                        }}
+                        title={t(lang, 'bookmarkBtn')}
+                        aria-label={t(lang, 'bookmarkBtn')}
+                        className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-neutral-400 hover:text-[#DD0000] dark:hover:text-[#FFCE00] cursor-pointer"
+                      >
+                        {lesson.progress?.bookmarked ? (
+                          <BookmarkCheck size={15} className="text-[#DD0000]" />
+                        ) : (
+                          <Bookmark size={15} />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

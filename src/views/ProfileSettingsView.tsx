@@ -63,7 +63,6 @@ export const ProfileSettingsView: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [customizeTab, setCustomizeTab] = useState<CustomizeCategory>('avatars');
   const [equippingId, setEquippingId] = useState<string | null>(null);
-  const [logoError, setLogoError] = useState(false);
 
   // Security forms
   const [currentPassword, setCurrentPassword] = useState('');
@@ -738,26 +737,11 @@ export const ProfileSettingsView: React.FC = () => {
       {/* About Webapp Footer Info */}
       <footer className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-3.5">
-          {!logoError ? (
-            <img
-              src="/icon.svg"
-              alt="SPRACHWERK Logo"
-              referrerPolicy="no-referrer"
-              onError={() => setLogoError(true)}
-              className="w-11 h-11 rounded-xl shrink-0 border border-neutral-200 dark:border-neutral-800"
-            />
-          ) : (
-            <div className="w-11 h-11 rounded-xl bg-neutral-950 flex items-center justify-center shrink-0 border border-neutral-800">
-              <BrandMark />
-            </div>
-          )}
+          <BrandMark size="lg" />
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <BrandMark size="sm" />
-              <span className="font-display font-extrabold tracking-tight text-base text-neutral-900 dark:text-white">
-                {t(lang, 'brandName')}
-              </span>
-            </div>
+            <span className="font-display font-extrabold tracking-tight text-base text-neutral-900 dark:text-white block">
+              {t(lang, 'brandName')}
+            </span>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
               {t(lang, 'brandSubtitle')}
             </p>

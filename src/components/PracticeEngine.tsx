@@ -113,6 +113,8 @@ export const PracticeParametersPanel: React.FC<{
   selectedTopics?: string[];
   topicTitle?: string;
   selectedLessons?: string[];
+  lessonTitle?: string;
+  lessonHasContent?: boolean;
   availableTypes?: ExerciseType[];
   availableDifficulties?: DifficultyLevel[];
   onBack?: () => void;
@@ -122,6 +124,8 @@ export const PracticeParametersPanel: React.FC<{
   selectedTopics = [],
   topicTitle,
   selectedLessons = [],
+  lessonTitle,
+  lessonHasContent,
   availableTypes,
   availableDifficulties,
   onBack,
@@ -222,7 +226,6 @@ export const PracticeParametersPanel: React.FC<{
   const handleStart = async () => {
     setLoading(true);
     try {
-
       const res = await apiRequest<{
         comingSoon: boolean;
         items: Question[];
@@ -234,7 +237,7 @@ export const PracticeParametersPanel: React.FC<{
           topics: selectedTopics,
           lessonIds: selectedLessons,
           types: params.exerciseTypes,
-          difficulty: params.difficulty,
+          difficulty: mode === 'lesson' ? undefined : params.difficulty,
           count: params.questionCount,
           order: params.order,
         },
@@ -255,6 +258,10 @@ export const PracticeParametersPanel: React.FC<{
       setRewardSummary(null);
       setStage('active');
     } catch (err) {
+      if (mode === 'lesson' && lessonHasContent === false) {
+        setStage('coming_soon');
+        return;
+      }
       pushToast(err instanceof Error ? err.message : 'Unable to load practice session.', 'error');
     } finally {
       setLoading(false);
@@ -356,20 +363,35 @@ export const PracticeParametersPanel: React.FC<{
           <Layers size={15} />
           <span>{t(lang, 'comingSoonBadge')}</span>
         </div>
-        <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-3">
-          {t(lang, 'comingSoonDatasetTitle')}
+        {mode === 'lesson' && lessonTitle && (
+          <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-1">
+            {lessonTitle}
+          </div>
+        )}
+        <h2
+          className={`text-2xl font-display font-bold text-neutral-900 dark:text-white ${
+            mode === 'lesson' ? 'mb-6' : 'mb-3'
+          }`}
+        >
+          {mode === 'lesson' ? 'Lesson content coming soon' : t(lang, 'comingSoonDatasetTitle')}
         </h2>
-        <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 mb-6">
-          {t(lang, 'comingSoonDatasetBody')}
-        </p>
+        {mode !== 'lesson' && (
+          <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 mb-6">
+            {t(lang, 'comingSoonDatasetBody')}
+          </p>
+        )}
 
         <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-4 mb-6">
           <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">
             {t(lang, 'practiceParameters')}
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-800 dark:text-neutral-200">
-            <span>{params.difficulty.toUpperCase()}</span>
-            <span aria-hidden="true">·</span>
+            {mode !== 'lesson' && (
+              <>
+                <span>{params.difficulty.toUpperCase()}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
             <span className="tabular-nums">{params.questionCount} {t(lang, 'questionsWord')}</span>
             <span aria-hidden="true">·</span>
             <span>{params.timerSeconds === 0 ? t(lang, 'timerOff') : `${params.timerSeconds}s`}</span>
@@ -394,7 +416,7 @@ export const PracticeParametersPanel: React.FC<{
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer min-h-[44px]"
             >
               <ArrowLeft size={16} />
-              <span>{t(lang, 'chooseAnotherTopicBtn')}</span>
+              <span>{mode === 'lesson' ? t(lang, 'backBtn') : t(lang, 'chooseAnotherTopicBtn')}</span>
             </button>
           )}
         </div>
@@ -601,7 +623,7 @@ export const PracticeParametersPanel: React.FC<{
               ? t(lang, 'defaultsConfigSubtitle')
               : mode === 'general'
               ? `${t(lang, 'categoryPrefix')}: ${topicTitle || selectedTopics.join(', ') || t(lang, 'topicMixedTitle')}`
-              : `${selectedLessons.length} ${t(lang, 'lessonsSelectedCount')}`}
+              : lessonTitle || `${selectedLessons.length} ${t(lang, 'lessonsSelectedCount')}`}
           </p>
         </div>
         {onBack && (
@@ -642,39 +664,41 @@ export const PracticeParametersPanel: React.FC<{
         </div>
       </div>
 
-      {/* Linguistic Difficulty */}
-      <div>
-        <div className="text-sm font-semibold text-neutral-900 dark:text-white mb-2.5">
-          {t(lang, 'difficultyLabel')}
+      {/* Linguistic Difficulty (General Practice only — lesson level is fixed per lesson) */}
+      {mode !== 'lesson' && (
+        <div>
+          <div className="text-sm font-semibold text-neutral-900 dark:text-white mb-2.5">
+            {t(lang, 'difficultyLabel')}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {allowedDifficulties.map((d) => {
+              const active = params.difficulty === d.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setParams((p) => ({ ...p, difficulty: d.id }))}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                    active
+                      ? 'border-black dark:border-[#FFCE00] bg-neutral-900 dark:bg-[#FFCE00]/15 text-white'
+                      : 'border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold">{d.labels[lang]}</span>
+                    <span className={`text-xs font-mono-tabular ${active ? 'text-[#FFCE00]' : 'text-neutral-500'}`}>
+                      {d.range}
+                    </span>
+                  </div>
+                  <p className={`text-xs leading-snug ${active ? 'text-neutral-300' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                    {d.desc[lang]}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {allowedDifficulties.map((d) => {
-            const active = params.difficulty === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => setParams((p) => ({ ...p, difficulty: d.id }))}
-                className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                  active
-                    ? 'border-black dark:border-[#FFCE00] bg-neutral-900 dark:bg-[#FFCE00]/15 text-white'
-                    : 'border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-400'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold">{d.labels[lang]}</span>
-                  <span className={`text-xs font-mono-tabular ${active ? 'text-[#FFCE00]' : 'text-neutral-500'}`}>
-                    {d.range}
-                  </span>
-                </div>
-                <p className={`text-xs leading-snug ${active ? 'text-neutral-300' : 'text-neutral-500 dark:text-neutral-400'}`}>
-                  {d.desc[lang]}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {/* Timer, Count, Order, Feedback Timing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

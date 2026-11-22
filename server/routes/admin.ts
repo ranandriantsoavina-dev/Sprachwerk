@@ -28,17 +28,19 @@ export function createAdminRouter(db: D1Database) {
   router.get('/codes', async (_req: AuthenticatedRequest, res: Response) => {
     try {
       const nowIso = new Date().toISOString();
-      // Mark any naturally expired active codes
+      // Mark any naturally expired active codes and clear stored raw code
       await db
         .prepare(
-          `UPDATE registration_codes SET status = 'expired' WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at <= ?`
+          `UPDATE registration_codes SET status = 'expired', code_value = NULL WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at <= ?`
         )
         .bind(nowIso)
         .run();
 
       const { results: rows } = await db
         .prepare(
-          `SELECT rc.id, rc.code_hint, rc.label, rc.status, rc.created_at, rc.expires_at, rc.redeemed_at, rc.revoked_at,
+          `SELECT rc.id, rc.code_hint,
+                  CASE WHEN rc.status = 'active' THEN rc.code_value ELSE NULL END AS full_code,
+                  rc.label, rc.status, rc.created_at, rc.expires_at, rc.redeemed_at, rc.revoked_at,
                   creator.username AS created_by_username,
                   redeemer.username AS redeemed_by_username
            FROM registration_codes rc
@@ -75,13 +77,14 @@ export function createAdminRouter(db: D1Database) {
       statements.push(
         db
           .prepare(
-            `INSERT INTO registration_codes (id, code_hash, code_hint, label, status, created_by_user_id, created_at, expires_at)
-             VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`
+            `INSERT INTO registration_codes (id, code_hash, code_hint, code_value, label, status, created_by_user_id, created_at, expires_at)
+             VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)`
           )
           .bind(
             id,
             hashSecret(normalizeCode(rawCode)),
             hint,
+            rawCode,
             cleanLabel || null,
             req.authUser!.id,
             nowIso,
@@ -104,7 +107,7 @@ export function createAdminRouter(db: D1Database) {
       const nowIso = new Date().toISOString();
       const result = await db
         .prepare(
-          `UPDATE registration_codes SET status = 'revoked', revoked_at = ?
+          `UPDATE registration_codes SET status = 'revoked', revoked_at = ?, code_value = NULL
            WHERE id = ? AND status = 'active'`
         )
         .bind(nowIso, req.params.id)

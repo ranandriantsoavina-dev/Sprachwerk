@@ -245,6 +245,12 @@ export async function ensureDbInitialized(db: D1Database): Promise<void> {
       // 1. Create tables and indexes via D1-compatible batch execution
       await db.batch(SCHEMA_STATEMENTS.map((sql) => db.prepare(sql)));
 
+      // 1b. Non-destructive column migration for existing registration_codes tables
+      const rcCols = await db.prepare("PRAGMA table_info('registration_codes')").all<{ name: string }>();
+      if (!rcCols.results.some((col) => col.name === 'code_value')) {
+        await db.prepare('ALTER TABLE registration_codes ADD COLUMN code_value TEXT').run();
+      }
+
       // 2. Seed default configuration and initial shop items & achievements
       await seedDefaults(db);
     } catch (err) {

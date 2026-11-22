@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, ChevronRight, Layers, Search, SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import { PracticeParametersPanel } from '../components/PracticeEngine';
 import { PracticeModeSwitch } from '../components/PracticeModeSwitch';
 import { useApp } from '../context/AppContext';
+import { LESSONS_CATALOG, LEVEL_STRUCTURE, formatLessonNumber } from '../data/lessonsCatalog';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
 import type { Lesson } from '../types/domain';
 
 export const LessonPracticeView: React.FC = () => {
-  const { lang, selectedLessonIdForPractice, setSelectedLessonIdForPractice, setScreen, setSelectedLessonIdForDetail } =
-    useApp();
+  const { lang, selectedLessonIdForPractice, setSelectedLessonIdForPractice } = useApp();
 
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [comingSoon, setComingSoon] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>(LESSONS_CATALOG);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -24,23 +23,15 @@ export const LessonPracticeView: React.FC = () => {
   );
 
   useEffect(() => {
-    if (selectedLessonIdForPractice) {
-      setSelectedIds([selectedLessonIdForPractice]);
-      setSubView('configure');
-      setSelectedLessonIdForPractice(null);
-    }
-  }, [selectedLessonIdForPractice, setSelectedLessonIdForPractice]);
-
-  useEffect(() => {
     let active = true;
     apiRequest<{ comingSoon: boolean; items: Lesson[] }>('/api/content/lessons')
       .then((res) => {
         if (!active) return;
-        setComingSoon(res.comingSoon || res.items.length === 0);
-        setLessons(res.items);
+        const items = res.items.length > 0 ? res.items : LESSONS_CATALOG;
+        setLessons(items);
       })
       .catch(() => {
-        if (active) setComingSoon(true);
+        if (active) setLessons(LESSONS_CATALOG);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -50,12 +41,27 @@ export const LessonPracticeView: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedLessonIdForPractice) {
+      setSelectedIds([selectedLessonIdForPractice]);
+      setSubView('configure');
+      setSelectedLessonIdForPractice(null);
+    }
+  }, [selectedLessonIdForPractice, setSelectedLessonIdForPractice]);
+
   if (subView === 'configure') {
+    const selectedLesson = lessons.find((l) => l.id === selectedIds[0]);
+    const lessonTitle = selectedLesson
+      ? `${selectedLesson.level} · #${formatLessonNumber(selectedLesson.unit)} · ${selectedLesson.title_de}`
+      : undefined;
+
     return (
       <PracticeParametersPanel
         mode="lesson"
         intent="start"
         selectedLessons={selectedIds}
+        lessonTitle={lessonTitle}
+        lessonHasContent={Boolean(selectedLesson?.hasContent)}
         onBack={() => setSubView('select')}
       />
     );
@@ -74,11 +80,21 @@ export const LessonPracticeView: React.FC = () => {
   const filtered = lessons.filter((l) => {
     if (levelFilter !== 'ALL' && l.level !== levelFilter) return false;
     if (search.trim()) {
-      const q = search.toLowerCase();
-      return l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q);
+      const q = search.toLowerCase().trim();
+      const num = formatLessonNumber(l.unit);
+      return (
+        (l.title_en || '').toLowerCase().includes(q) ||
+        l.title_de.toLowerCase().includes(q) ||
+        l.topic.toLowerCase().includes(q) ||
+        num.includes(q)
+      );
     }
     return true;
   });
+
+  const visibleLevels = LEVEL_STRUCTURE.filter(
+    (section) => levelFilter === 'ALL' || section.level === levelFilter
+  );
 
   const openLessonConfig = (id: string) => {
     setSelectedIds([id]);
@@ -141,64 +157,85 @@ export const LessonPracticeView: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
+      {loading && lessons.length === 0 ? (
         <div className="h-40 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] animate-pulse" />
-      ) : comingSoon ? (
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 max-w-3xl">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#DD0000] dark:text-[#FFCE00] mb-3">
-            <Layers size={15} />
-            <span>{t(lang, 'comingSoonBadge')}</span>
-          </div>
-          <h3 className="text-xl font-display font-bold text-neutral-900 dark:text-white mb-2">
-            {t(lang, 'comingSoonDatasetTitle')}
-          </h3>
-          <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
-            {t(lang, 'comingSoonDatasetBody')}
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-8 text-center space-y-3">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300">
+            No lessons match the current filter.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setLevelFilter('ALL');
+              setSearch('');
+            }}
+            className="px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white cursor-pointer"
+          >
+            Reset filters
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((lesson) => (
-            <div
-              key={lesson.id}
-              className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 p-4 flex items-center justify-between gap-3 transition-colors"
-            >
-              <button
-                type="button"
-                onClick={() => openLessonConfig(lesson.id)}
-                className="flex-1 text-left cursor-pointer min-w-0"
-              >
-                <div className="text-xs font-mono-tabular text-neutral-500">
-                  {lesson.level} · {t(lang, 'unitLabel')} {lesson.unit} · {lesson.topic}
+        <div className="space-y-8">
+          {visibleLevels.map((section) => {
+            const sectionLessons = filtered.filter((l) => l.level === section.level);
+            if (sectionLessons.length === 0) return null;
+
+            return (
+              <section key={section.level} className="space-y-3">
+                {/* Level Section Header */}
+                <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-black dark:bg-white text-white dark:text-black text-xs font-mono-tabular font-bold">
+                        {section.level}
+                      </span>
+                      <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white">
+                        {section.title}
+                      </h3>
+                    </div>
+                    <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 mt-1.5">
+                      {section.subtitle}
+                    </p>
+                  </div>
+                  <div className="text-xs font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] whitespace-nowrap shrink-0">
+                    {sectionLessons.length === section.lessonCount
+                      ? `${section.lessonCount} lessons`
+                      : `${sectionLessons.length} / ${section.lessonCount} lessons`}
+                  </div>
                 </div>
-                <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5 break-words">
-                  {lesson.title_de}
+
+                {/* Lessons List Grid for Level */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {sectionLessons.map((lesson) => (
+                    <button
+                      key={lesson.id}
+                      type="button"
+                      onClick={() => openLessonConfig(lesson.id)}
+                      className="group text-left rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 p-4 flex items-center justify-between gap-3 transition-colors cursor-pointer"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-xs font-mono-tabular text-neutral-500 dark:text-neutral-400">
+                          <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                            {formatLessonNumber(lesson.unit)}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span>{lesson.level}</span>
+                        </div>
+                        <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5 break-words">
+                          {lesson.title_de}
+                        </div>
+                      </div>
+                      <ChevronRight
+                        size={16}
+                        className="text-neutral-400 group-hover:text-[#DD0000] dark:group-hover:text-[#FFCE00] shrink-0 transition-colors"
+                      />
+                    </button>
+                  ))}
                 </div>
-              </button>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedLessonIdForDetail(lesson.id);
-                    setScreen('library');
-                  }}
-                  title={t(lang, 'viewLessonExplanation')}
-                  aria-label={t(lang, 'viewLessonExplanation')}
-                  className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
-                >
-                  <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openLessonConfig(lesson.id)}
-                  aria-label={t(lang, 'practiceThisLessonBtn')}
-                  className="p-1.5 rounded-lg text-neutral-400 group-hover:text-[#DD0000] dark:group-hover:text-[#FFCE00] cursor-pointer min-h-[40px] flex items-center justify-center transition-colors"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

@@ -263,7 +263,7 @@ export function createAuthRouter(db: D1Database) {
 
       if (!codeRow || codeRow.status !== 'active' || (codeRow.expires_at && codeRow.expires_at <= nowIso)) {
         if (codeRow && codeRow.status === 'active' && codeRow.expires_at && codeRow.expires_at <= nowIso) {
-          await db.prepare(`UPDATE registration_codes SET status = 'expired' WHERE id = ?`).bind(codeRow.id).run();
+          await db.prepare(`UPDATE registration_codes SET status = 'expired', code_value = NULL WHERE id = ?`).bind(codeRow.id).run();
         }
         res.status(400).json({ error: 'Invalid, expired, or already redeemed registration code.' });
         return;
@@ -303,7 +303,7 @@ export function createAuthRouter(db: D1Database) {
       const redeemCodeStmt = db
         .prepare(
           `UPDATE registration_codes
-           SET status = 'redeemed', redeemed_by_user_id = ?, redeemed_at = ?
+           SET status = 'redeemed', redeemed_by_user_id = ?, redeemed_at = ?, code_value = NULL
            WHERE id = ? AND status = 'active'`
         )
         .bind(userId, nowIso, codeRow.id);

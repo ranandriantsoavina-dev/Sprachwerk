@@ -10,6 +10,7 @@ import {
   recordQualifyingStudyActivity,
 } from '../gamification.ts';
 import { requireAuth, type AuthenticatedRequest } from '../security.ts';
+import { LESSONS_CATALOG } from '../../src/data/lessonsCatalog.ts';
 
 const CONTENT_DIR = path.resolve(process.cwd(), 'data', 'content');
 
@@ -33,13 +34,29 @@ export interface LessonRecord {
   id: string;
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
   unit: number;
+  title_en?: string;
   title_de: string;
   topic: string;
+  hasContent?: boolean;
   objectives: Record<string, string>;
   explanation_i18n: Record<string, string>;
   rules: unknown[];
   examples_de: unknown[];
   common_mistakes: unknown[];
+}
+
+function getLessonsCatalog(): LessonRecord[] {
+  const fromFile = readDatasetFile<LessonRecord>('lessons.json');
+  if (fromFile.length > 0) {
+    return fromFile.map((item) => ({
+      ...item,
+      hasContent: item.hasContent ?? Object.keys(item.explanation_i18n || {}).length > 0,
+    }));
+  }
+  return LESSONS_CATALOG.map((item) => ({
+    ...item,
+    hasContent: false,
+  }));
 }
 
 export interface QuestionRecord {
@@ -77,7 +94,7 @@ export function createContentRouter(db: D1Database) {
   const router = Router();
 
   router.get('/content/status', (_req, res: Response) => {
-    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const lessons = getLessonsCatalog();
     const questions = readDatasetFile<QuestionRecord>('questions.json');
     const flashcards = readDatasetFile<FlashcardRecord>('flashcards.json');
 
@@ -86,13 +103,13 @@ export function createContentRouter(db: D1Database) {
       lessonsCount: lessons.length,
       questionsCount: questions.length,
       flashcardsCount: flashcards.length,
-      comingSoon: lessons.length === 0 && questions.length === 0 && flashcards.length === 0,
+      comingSoon: lessons.every((l) => !l.hasContent) && questions.length === 0 && flashcards.length === 0,
     });
   });
 
   router.get('/content/lessons', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const lessons = readDatasetFile<LessonRecord>('lessons.json');
+      const lessons = getLessonsCatalog();
       const level = String(req.query.level || '').toUpperCase();
       const topic = String(req.query.topic || '').toLowerCase();
       const q = String(req.query.q || '').toLowerCase().trim();
@@ -118,7 +135,10 @@ export function createContentRouter(db: D1Database) {
       }
       if (q) {
         filtered = filtered.filter(
-          (l) => l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q)
+          (l) =>
+            (l.title_en || '').toLowerCase().includes(q) ||
+            l.title_de.toLowerCase().includes(q) ||
+            l.topic.toLowerCase().includes(q)
         );
       }
 
@@ -142,12 +162,12 @@ export function createContentRouter(db: D1Database) {
 
   router.get('/content/lessons/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const lessons = readDatasetFile<LessonRecord>('lessons.json');
+      const lessons = getLessonsCatalog();
       const lesson = lessons.find((l) => l.id === req.params.id);
       if (!lesson) {
         res.status(404).json({
-          comingSoon: lessons.length === 0,
-          error: lessons.length === 0 ? 'Curriculum dataset is coming soon.' : 'Lesson not found.',
+          comingSoon: true,
+          error: 'Lesson not found.',
         });
         return;
       }
@@ -193,10 +213,10 @@ export function createContentRouter(db: D1Database) {
   });
 
   router.post('/lessons/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    const lessons = readDatasetFile<LessonRecord>('lessons.json');
+    const lessons = getLessonsCatalog();
     const lesson = lessons.find((l) => l.id === req.params.id);
-    if (!lesson) {
-      res.status(404).json({ error: 'Lesson dataset not yet available.' });
+    if (!lesson || !lesson.hasContent) {
+      res.status(404).json({ error: 'Lesson content coming soon' });
       return;
     }
 
@@ -280,7 +300,7 @@ export function createContentRouter(db: D1Database) {
       pool = pool.filter((q) => q.topic_tags.some((t) => topics.includes(t)));
     }
 
-    if (difficulty) {
+    if (mode !== 'lesson' && difficulty) {
       pool = pool.filter((q) => q.difficulty === difficulty);
     }
     if (Array.isArray(types) && types.length > 0) {

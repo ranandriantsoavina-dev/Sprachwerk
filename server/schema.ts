@@ -46,6 +46,7 @@ export const SCHEMA_STATEMENTS: string[] = [
     id TEXT PRIMARY KEY,
     code_hash TEXT NOT NULL UNIQUE,
     code_hint TEXT NOT NULL,
+    code_value TEXT,
     label TEXT,
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'redeemed', 'revoked', 'expired')),
     created_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,

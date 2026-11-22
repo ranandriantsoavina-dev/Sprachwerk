@@ -161,8 +161,10 @@ export interface Lesson {
   id: string;
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
   unit: number;
+  title_en?: string;
   title_de: string;
   topic: string;
+  hasContent?: boolean;
   objectives: Record<string, string>;
   explanation_i18n: Record<string, string>;
   rules: Array<{ title: string; body: string }>;
@@ -201,6 +203,7 @@ export interface Flashcard {
 export interface RegistrationCodeAudit {
   id: string;
   code_hint: string;
+  full_code?: string | null;
   label: string | null;
   status: 'active' | 'redeemed' | 'revoked' | 'expired';
   created_at: string;

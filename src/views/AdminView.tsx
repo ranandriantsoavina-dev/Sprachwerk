@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Copy, KeyRound, Mail, Plus, ShieldCheck, XCircle } from 'lucide-react';
+import { Check, Copy, KeyRound, Mail, Plus, ShieldCheck, XCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { ApiError, apiRequest } from '../lib/api';
@@ -32,6 +32,7 @@ export const AdminView: React.FC = () => {
   const [label, setLabel] = useState('');
   const [expiresInDays, setExpiresInDays] = useState(30);
   const [settings, setSettings] = useState<AdminSettingsResponse | null>(null);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   const loadAdminData = async () => {
     const [cRes, sRes] = await Promise.allSettled([
@@ -80,9 +81,15 @@ export const AdminView: React.FC = () => {
     }
   };
 
-  const handleCopy = async (code: string) => {
+  const handleCopy = async (code: string, rowId?: string) => {
     try {
       await navigator.clipboard.writeText(code);
+      if (rowId) {
+        setCopiedCodeId(rowId);
+        setTimeout(() => {
+          setCopiedCodeId((prev) => (prev === rowId ? null : prev));
+        }, 1600);
+      }
       pushToast('✓', 'success');
     } catch {
       pushToast('Copy failed — select and copy manually.', 'error');
@@ -296,7 +303,24 @@ export const AdminView: React.FC = () => {
                 {codes.map((c) => (
                   <tr key={c.id}>
                     <td className="px-4 py-3 font-mono-tabular font-semibold text-neutral-900 dark:text-white whitespace-nowrap">
-                      {c.code_hint}
+                      <div className="inline-flex items-center gap-1.5">
+                        <span>{c.code_hint}</span>
+                        {c.status === 'active' && c.full_code && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(c.full_code!, c.id)}
+                            className="inline-flex items-center justify-center p-1.5 rounded-lg text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                            title="Copy full code"
+                            aria-label="Copy full code"
+                          >
+                            {copiedCodeId === c.id ? (
+                              <Check size={14} className="text-emerald-600 dark:text-emerald-400" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{c.label || '—'}</td>
                     <td className="px-4 py-3 uppercase font-semibold">
