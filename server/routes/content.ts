@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { Router, type Response } from 'express';
-import type { DatabaseSync } from 'node:sqlite';
+import type { D1Database } from '../db.ts';
 import {
   awardRewardEvent,
   getGamificationConfig,
@@ -14,15 +14,19 @@ import { requireAuth, type AuthenticatedRequest } from '../security.ts';
 const CONTENT_DIR = path.resolve(process.cwd(), 'data', 'content');
 
 function readDatasetFile<T>(filename: string): T[] {
-  const filePath = path.join(CONTENT_DIR, filename);
-  if (!fs.existsSync(filePath)) return [];
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as T[]) : [];
+    if (typeof fs !== 'undefined' && fs?.existsSync) {
+      const filePath = path.join(CONTENT_DIR, filename);
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? (parsed as T[]) : [];
+      }
+    }
   } catch {
-    return [];
+    // Cloudflare Workers has an ephemeral/in-memory filesystem; fallback gracefully
   }
+  return [];
 }
 
 export interface LessonRecord {
@@ -69,7 +73,7 @@ export interface FlashcardRecord {
   example_de?: string;
 }
 
-export function createContentRouter(db: DatabaseSync) {
+export function createContentRouter(db: D1Database) {
   const router = Router();
 
   router.get('/content/status', (_req, res: Response) => {
@@ -86,91 +90,109 @@ export function createContentRouter(db: DatabaseSync) {
     });
   });
 
-  router.get('/content/lessons', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-    const lessons = readDatasetFile<LessonRecord>('lessons.json');
-    const level = String(req.query.level || '').toUpperCase();
-    const topic = String(req.query.topic || '').toLowerCase();
-    const q = String(req.query.q || '').toLowerCase().trim();
+  router.get('/content/lessons', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const lessons = readDatasetFile<LessonRecord>('lessons.json');
+      const level = String(req.query.level || '').toUpperCase();
+      const topic = String(req.query.topic || '').toLowerCase();
+      const q = String(req.query.q || '').toLowerCase().trim();
 
-    const progressRows = db
-      .prepare('SELECT lesson_id, bookmarked, first_completed_at, review_count FROM lesson_progress WHERE user_id = ?')
-      .all(req.authUser!.id) as Array<{
-      lesson_id: string;
-      bookmarked: number;
-      first_completed_at: string | null;
-      review_count: number;
-    }>;
-    const progressMap = new Map(progressRows.map((r) => [r.lesson_id, r]));
+      const { results: progressRows } = await db
+        .prepare('SELECT lesson_id, bookmarked, first_completed_at, review_count FROM lesson_progress WHERE user_id = ?')
+        .bind(req.authUser!.id)
+        .all<{
+          lesson_id: string;
+          bookmarked: number;
+          first_completed_at: string | null;
+          review_count: number;
+        }>();
 
-    let filtered = lessons;
-    if (level && level !== 'ALL') {
-      filtered = filtered.filter((l) => l.level === level);
-    }
-    if (topic && topic !== 'all') {
-      filtered = filtered.filter((l) => l.topic.toLowerCase() === topic);
-    }
-    if (q) {
-      filtered = filtered.filter(
-        (l) => l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q)
-      );
-    }
+      const progressMap = new Map(progressRows.map((r) => [r.lesson_id, r]));
 
-    res.json({
-      comingSoon: lessons.length === 0,
-      plannedTotal: 180,
-      totalAvailable: lessons.length,
-      items: filtered.map((l) => ({
-        ...l,
-        progress: progressMap.get(l.id) || {
-          bookmarked: 0,
-          first_completed_at: null,
-          review_count: 0,
-        },
-      })),
-    });
-  });
+      let filtered = lessons;
+      if (level && level !== 'ALL') {
+        filtered = filtered.filter((l) => l.level === level);
+      }
+      if (topic && topic !== 'all') {
+        filtered = filtered.filter((l) => l.topic.toLowerCase() === topic);
+      }
+      if (q) {
+        filtered = filtered.filter(
+          (l) => l.title_de.toLowerCase().includes(q) || l.topic.toLowerCase().includes(q)
+        );
+      }
 
-  router.get('/content/lessons/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-    const lessons = readDatasetFile<LessonRecord>('lessons.json');
-    const lesson = lessons.find((l) => l.id === req.params.id);
-    if (!lesson) {
-      res.status(404).json({
+      res.json({
         comingSoon: lessons.length === 0,
-        error: lessons.length === 0 ? 'Curriculum dataset is coming soon.' : 'Lesson not found.',
+        plannedTotal: 180,
+        totalAvailable: lessons.length,
+        items: filtered.map((l) => ({
+          ...l,
+          progress: progressMap.get(l.id) || {
+            bookmarked: 0,
+            first_completed_at: null,
+            review_count: 0,
+          },
+        })),
       });
-      return;
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Database error' });
     }
-
-    const questions = readDatasetFile<QuestionRecord>('questions.json').filter((q) =>
-      q.lesson_ids.includes(lesson.id)
-    );
-    const availableTypes = Array.from(new Set(questions.map((q) => q.type)));
-    const availableDifficulties = Array.from(new Set(questions.map((q) => q.difficulty)));
-
-    const prog = db
-      .prepare('SELECT bookmarked, first_completed_at, last_reviewed_at, review_count FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
-      .get(req.authUser!.id, lesson.id);
-
-    res.json({
-      lesson,
-      availableTypes,
-      availableDifficulties,
-      linkedQuestionCount: questions.length,
-      progress: prog || { bookmarked: 0, first_completed_at: null, last_reviewed_at: null, review_count: 0 },
-    });
   });
 
-  router.post('/lessons/:id/bookmark', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-    const { bookmarked } = req.body || {};
-    const flag = bookmarked ? 1 : 0;
-    db.prepare(
-      `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked) VALUES (?, ?, ?)
-       ON CONFLICT(user_id, lesson_id) DO UPDATE SET bookmarked = excluded.bookmarked`
-    ).run(req.authUser!.id, req.params.id, flag);
-    res.json({ ok: true, bookmarked: Boolean(flag) });
+  router.get('/content/lessons/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const lessons = readDatasetFile<LessonRecord>('lessons.json');
+      const lesson = lessons.find((l) => l.id === req.params.id);
+      if (!lesson) {
+        res.status(404).json({
+          comingSoon: lessons.length === 0,
+          error: lessons.length === 0 ? 'Curriculum dataset is coming soon.' : 'Lesson not found.',
+        });
+        return;
+      }
+
+      const questions = readDatasetFile<QuestionRecord>('questions.json').filter((q) =>
+        q.lesson_ids.includes(lesson.id)
+      );
+      const availableTypes = Array.from(new Set(questions.map((q) => q.type)));
+      const availableDifficulties = Array.from(new Set(questions.map((q) => q.difficulty)));
+
+      const prog = await db
+        .prepare('SELECT bookmarked, first_completed_at, last_reviewed_at, review_count FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
+        .bind(req.authUser!.id, lesson.id)
+        .first();
+
+      res.json({
+        lesson,
+        availableTypes,
+        availableDifficulties,
+        linkedQuestionCount: questions.length,
+        progress: prog || { bookmarked: 0, first_completed_at: null, last_reviewed_at: null, review_count: 0 },
+      });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Database error' });
+    }
   });
 
-  router.post('/lessons/:id/complete', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  router.post('/lessons/:id/bookmark', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { bookmarked } = req.body || {};
+      const flag = bookmarked ? 1 : 0;
+      await db
+        .prepare(
+          `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked) VALUES (?, ?, ?)
+           ON CONFLICT(user_id, lesson_id) DO UPDATE SET bookmarked = excluded.bookmarked`
+        )
+        .bind(req.authUser!.id, req.params.id, flag)
+        .run();
+      res.json({ ok: true, bookmarked: Boolean(flag) });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Database error' });
+    }
+  });
+
+  router.post('/lessons/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     const lessons = readDatasetFile<LessonRecord>('lessons.json');
     const lesson = lessons.find((l) => l.id === req.params.id);
     if (!lesson) {
@@ -179,24 +201,27 @@ export function createContentRouter(db: DatabaseSync) {
     }
 
     const userId = req.authUser!.id;
-    const cfg = getGamificationConfig(db);
+    const cfg = await getGamificationConfig(db);
     const nowIso = new Date().toISOString();
     const localDate = getLocalDateString(req.authUser!.timezone);
 
-    db.exec('BEGIN IMMEDIATE');
     try {
-      const existing = db
+      const existing = await db
         .prepare('SELECT first_completed_at, last_reviewed_at FROM lesson_progress WHERE user_id = ? AND lesson_id = ?')
-        .get(userId, lesson.id) as { first_completed_at: string | null; last_reviewed_at: string | null } | undefined;
+        .bind(userId, lesson.id)
+        .first<{ first_completed_at: string | null; last_reviewed_at: string | null }>();
 
       if (!existing || !existing.first_completed_at) {
-        db.prepare(
-          `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked, first_completed_at, last_reviewed_at, review_count)
-           VALUES (?, ?, 0, ?, ?, 1)
-           ON CONFLICT(user_id, lesson_id) DO UPDATE SET first_completed_at = COALESCE(first_completed_at, excluded.first_completed_at), last_reviewed_at = excluded.last_reviewed_at, review_count = review_count + 1`
-        ).run(userId, lesson.id, nowIso, nowIso);
+        await db
+          .prepare(
+            `INSERT INTO lesson_progress (user_id, lesson_id, bookmarked, first_completed_at, last_reviewed_at, review_count)
+             VALUES (?, ?, 0, ?, ?, 1)
+             ON CONFLICT(user_id, lesson_id) DO UPDATE SET first_completed_at = COALESCE(first_completed_at, excluded.first_completed_at), last_reviewed_at = excluded.last_reviewed_at, review_count = review_count + 1`
+          )
+          .bind(userId, lesson.id, nowIso, nowIso)
+          .run();
 
-        const reward = awardRewardEvent(db, {
+        const reward = await awardRewardEvent(db, {
           userId,
           actionType: 'lesson_first_complete',
           xpDelta: cfg.xpPerLessonFirst,
@@ -205,17 +230,20 @@ export function createContentRouter(db: DatabaseSync) {
           idempotencyKey: `lesson_first:${userId}:${lesson.id}`,
           localDate,
         });
-        db.exec('COMMIT');
+
         res.json({ firstCompletion: true, xpAwarded: reward.xpDelta, coinsAwarded: reward.coinDelta });
         return;
       }
 
       // Daily lesson review (once per calendar day per lesson)
-      db.prepare(
-        `UPDATE lesson_progress SET last_reviewed_at = ?, review_count = review_count + 1 WHERE user_id = ? AND lesson_id = ?`
-      ).run(nowIso, userId, lesson.id);
+      await db
+        .prepare(
+          `UPDATE lesson_progress SET last_reviewed_at = ?, review_count = review_count + 1 WHERE user_id = ? AND lesson_id = ?`
+        )
+        .bind(nowIso, userId, lesson.id)
+        .run();
 
-      const reward = awardRewardEvent(db, {
+      const reward = await awardRewardEvent(db, {
         userId,
         actionType: 'lesson_review',
         xpDelta: cfg.xpPerLessonReview,
@@ -224,21 +252,16 @@ export function createContentRouter(db: DatabaseSync) {
         idempotencyKey: `lesson_review:${userId}:${lesson.id}:${localDate}`,
         localDate,
       });
-      db.exec('COMMIT');
+
       res.json({ firstCompletion: false, xpAwarded: reward.xpDelta, coinsAwarded: reward.coinDelta });
     } catch (err) {
-      try {
-        db.exec('ROLLBACK');
-      } catch {
-        // ignore
-      }
       res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to record lesson completion.' });
     }
   });
 
-  router.post('/content/practice/query', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  router.post('/content/practice/query', requireAuth, (_req: AuthenticatedRequest, res: Response) => {
     const { mode, topics = [], lessonIds = [], types = [], difficulty, count = 10, order = 'shuffled' } =
-      req.body || {};
+      _req.body || {};
 
     const questions = readDatasetFile<QuestionRecord>('questions.json');
     if (questions.length === 0) {
@@ -285,9 +308,9 @@ export function createContentRouter(db: DatabaseSync) {
     });
   });
 
-  router.get('/content/flashcards', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  router.get('/content/flashcards', requireAuth, (_req: AuthenticatedRequest, res: Response) => {
     const cards = readDatasetFile<FlashcardRecord>('flashcards.json');
-    const deck = String(req.query.deck || '');
+    const deck = String(_req.query.deck || '');
     const filtered = deck && deck !== 'all' ? cards.filter((c) => c.deck === deck) : cards;
 
     res.json({
@@ -297,7 +320,7 @@ export function createContentRouter(db: DatabaseSync) {
     });
   });
 
-  router.post('/practice/submit', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  router.post('/practice/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.authUser!.id;
     const {
       mode,
@@ -314,53 +337,53 @@ export function createContentRouter(db: DatabaseSync) {
       return;
     }
 
-    const existing = db
-      .prepare('SELECT id, xp_awarded, coins_awarded FROM practice_sessions WHERE idempotency_key = ?')
-      .get(idempotencyKey) as { id: string; xp_awarded: number; coins_awarded: number } | undefined;
-
-    if (existing) {
-      res.json({
-        sessionId: existing.id,
-        xpAwarded: existing.xp_awarded,
-        coinsAwarded: existing.coins_awarded,
-        duplicateIgnored: true,
-      });
-      return;
-    }
-
-    const safeResults = Array.isArray(results) ? results : [];
-    const totalQuestions = safeResults.length;
-    const correctCount = safeResults.filter((r) => Boolean(r?.isCorrect)).length;
-    const skippedCount = safeResults.filter((r) => Boolean(r?.skipped)).length;
-    const timedOutCount = safeResults.filter((r) => Boolean(r?.timedOut)).length;
-    const incorrectCount = Math.max(0, totalQuestions - correctCount - skippedCount - timedOutCount);
-    const answeredCount = totalQuestions - skippedCount - timedOutCount;
-
-    if (answeredCount <= 0) {
-      res.status(400).json({ error: 'Cannot award rewards for an empty or unanswered session.' });
-      return;
-    }
-
-    const cfg = getGamificationConfig(db);
-    let xp = correctCount * cfg.xpPerQuestionCorrect;
-    let coins = 0;
-
-    if (answeredCount >= cfg.minQuestionsForSessionReward) {
-      xp += cfg.xpPerSessionComplete;
-      coins += cfg.coinsPerSessionComplete;
-      if (correctCount === answeredCount) {
-        xp += cfg.xpPerPerfectSession;
-      }
-    }
-
-    db.exec('BEGIN IMMEDIATE');
     try {
-      const streak = recordQualifyingStudyActivity(db, userId, req.authUser!.timezone);
+      const existing = await db
+        .prepare('SELECT id, xp_awarded, coins_awarded FROM practice_sessions WHERE idempotency_key = ?')
+        .bind(idempotencyKey)
+        .first<{ id: string; xp_awarded: number; coins_awarded: number }>();
+
+      if (existing) {
+        res.json({
+          sessionId: existing.id,
+          xpAwarded: existing.xp_awarded,
+          coinsAwarded: existing.coins_awarded,
+          duplicateIgnored: true,
+        });
+        return;
+      }
+
+      const safeResults = Array.isArray(results) ? results : [];
+      const totalQuestions = safeResults.length;
+      const correctCount = safeResults.filter((r) => Boolean(r?.isCorrect)).length;
+      const skippedCount = safeResults.filter((r) => Boolean(r?.skipped)).length;
+      const timedOutCount = safeResults.filter((r) => Boolean(r?.timedOut)).length;
+      const incorrectCount = Math.max(0, totalQuestions - correctCount - skippedCount - timedOutCount);
+      const answeredCount = totalQuestions - skippedCount - timedOutCount;
+
+      if (answeredCount <= 0) {
+        res.status(400).json({ error: 'Cannot award rewards for an empty or unanswered session.' });
+        return;
+      }
+
+      const cfg = await getGamificationConfig(db);
+      let xp = correctCount * cfg.xpPerQuestionCorrect;
+      let coins = 0;
+
+      if (answeredCount >= cfg.minQuestionsForSessionReward) {
+        xp += cfg.xpPerSessionComplete;
+        coins += cfg.coinsPerSessionComplete;
+        if (correctCount === answeredCount) {
+          xp += cfg.xpPerPerfectSession;
+        }
+      }
+
+      const streak = await recordQualifyingStudyActivity(db, userId, req.authUser!.timezone);
       let dailyBonusXp = 0;
       let dailyBonusCoins = 0;
 
       if (streak.isFirstStudyOfDay) {
-        const daily = awardRewardEvent(db, {
+        const daily = await awardRewardEvent(db, {
           userId,
           actionType: 'daily_first_study',
           xpDelta: cfg.xpPerDailyFirstStudy,
@@ -373,33 +396,36 @@ export function createContentRouter(db: DatabaseSync) {
       }
 
       const sessionId = crypto.randomUUID();
-      db.prepare(
-        `INSERT INTO practice_sessions
-         (id, user_id, mode, selected_topics_json, selected_lessons_json, parameters_json,
-          total_questions, correct_count, incorrect_count, skipped_count, timed_out_count,
-          elapsed_seconds, results_json, xp_awarded, coins_awarded, idempotency_key, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        sessionId,
-        userId,
-        mode === 'lesson' ? 'lesson' : 'general',
-        JSON.stringify(selectedTopics),
-        JSON.stringify(selectedLessons),
-        JSON.stringify(parameters),
-        totalQuestions,
-        correctCount,
-        incorrectCount,
-        skippedCount,
-        timedOutCount,
-        Math.max(0, Number(elapsedSeconds) || 0),
-        JSON.stringify(safeResults),
-        xp,
-        coins,
-        idempotencyKey,
-        new Date().toISOString()
-      );
+      await db
+        .prepare(
+          `INSERT INTO practice_sessions
+           (id, user_id, mode, selected_topics_json, selected_lessons_json, parameters_json,
+            total_questions, correct_count, incorrect_count, skipped_count, timed_out_count,
+            elapsed_seconds, results_json, xp_awarded, coins_awarded, idempotency_key, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .bind(
+          sessionId,
+          userId,
+          mode === 'lesson' ? 'lesson' : 'general',
+          JSON.stringify(selectedTopics),
+          JSON.stringify(selectedLessons),
+          JSON.stringify(parameters),
+          totalQuestions,
+          correctCount,
+          incorrectCount,
+          skippedCount,
+          timedOutCount,
+          Math.max(0, Number(elapsedSeconds) || 0),
+          JSON.stringify(safeResults),
+          xp,
+          coins,
+          idempotencyKey,
+          new Date().toISOString()
+        )
+        .run();
 
-      const sessionReward = awardRewardEvent(db, {
+      const sessionReward = await awardRewardEvent(db, {
         userId,
         actionType: 'practice_session',
         xpDelta: xp,
@@ -409,7 +435,6 @@ export function createContentRouter(db: DatabaseSync) {
         localDate: streak.localDate,
       });
 
-      db.exec('COMMIT');
       res.status(201).json({
         sessionId,
         xpAwarded: sessionReward.xpDelta,
@@ -419,11 +444,6 @@ export function createContentRouter(db: DatabaseSync) {
         streak,
       });
     } catch (err) {
-      try {
-        db.exec('ROLLBACK');
-      } catch {
-        // ignore
-      }
       res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to submit session.' });
     }
   });

@@ -1,15 +1,23 @@
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
-import type { DatabaseSync } from 'node:sqlite';
+import type { D1Database } from './db.ts';
 
 const SESSION_COOKIE_NAME = 'sw_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14; // 14 days
 
-// Process-scoped fallback secret if SESSION_SECRET env var is unset
-const EPHEMERAL_SECRET = crypto.randomBytes(32).toString('hex');
+// Lazily initialized fallback secret if SESSION_SECRET env var is unset
+let ephemeralSecret: string | null = null;
 
 export function getSessionSecret(): string {
-  return process.env.SESSION_SECRET || EPHEMERAL_SECRET;
+  const cfEnv = (globalThis as any).__CF_ENV__;
+  const fromCf = cfEnv?.SESSION_SECRET ? String(cfEnv.SESSION_SECRET).trim() : '';
+  const fromNode = typeof process !== 'undefined' && process.env?.SESSION_SECRET ? process.env.SESSION_SECRET.trim() : '';
+  if (fromCf) return fromCf;
+  if (fromNode) return fromNode;
+  if (!ephemeralSecret) {
+    ephemeralSecret = crypto.randomBytes(32).toString('hex');
+  }
+  return ephemeralSecret;
 }
 
 export function hashPassword(password: string): string {
@@ -148,24 +156,27 @@ export function clearSessionCookie(req: Request, res: Response): void {
   res.setHeader('Set-Cookie', parts.join('; '));
 }
 
-export function createSession(
-  db: DatabaseSync,
+export async function createSession(
+  db: D1Database,
   req: Request,
   userId: string
-): { sessionId: string; rawToken: string; expiresAt: string } {
+): Promise<{ sessionId: string; rawToken: string; expiresAt: string }> {
   const sessionId = crypto.randomUUID();
   const rawToken = generateRandomToken(32);
   const tokenHash = hashSecret(rawToken);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
   const userAgent = String(req.headers['user-agent'] || '').slice(0, 200);
-  const rawIp = req.ip || req.socket.remoteAddress || '';
+  const rawIp = req.ip || req.socket?.remoteAddress || '';
   const ipPrefix = rawIp.split('.').slice(0, 3).join('.');
 
-  db.prepare(
-    `INSERT INTO sessions (id, user_id, token_hash, user_agent, ip_prefix, created_at, last_seen_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, userId, tokenHash, userAgent, ipPrefix, now.toISOString(), now.toISOString(), expiresAt);
+  await db
+    .prepare(
+      `INSERT INTO sessions (id, user_id, token_hash, user_agent, ip_prefix, created_at, last_seen_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .bind(sessionId, userId, tokenHash, userAgent, ipPrefix, now.toISOString(), now.toISOString(), expiresAt)
+    .run();
 
   return { sessionId, rawToken, expiresAt };
 }
@@ -212,33 +223,38 @@ export function extractSessionToken(req: Request): string | null {
   return extractSessionTokens(req)[0] ?? null;
 }
 
-export function attachAuth(db: DatabaseSync) {
-  return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
-    const candidates = extractSessionTokens(req);
-    if (candidates.length === 0) return next();
+export function attachAuth(db: D1Database) {
+  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+    try {
+      const candidates = extractSessionTokens(req);
+      if (candidates.length === 0) return next();
 
-    const nowIso = new Date().toISOString();
-    const stmt = db.prepare(
-      `SELECT s.id AS sessionId, s.expires_at, s.revoked_at,
-              u.id, u.username, u.email, u.role, u.status, u.email_verified,
-              u.display_name, u.interface_lang, u.theme, u.timezone,
-              u.leaderboard_visible, u.reduced_motion, u.xp_total, u.coins_balance,
-              u.current_streak, u.best_streak, u.last_study_date, u.streak_freezes_available
-       FROM sessions s
-       JOIN users u ON u.id = s.user_id
-       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?`
-    );
+      const nowIso = new Date().toISOString();
+      const stmt = db.prepare(
+        `SELECT s.id AS sessionId, s.expires_at, s.revoked_at,
+                u.id, u.username, u.email, u.role, u.status, u.email_verified,
+                u.display_name, u.interface_lang, u.theme, u.timezone,
+                u.leaderboard_visible, u.reduced_motion, u.xp_total, u.coins_balance,
+                u.current_streak, u.best_streak, u.last_study_date, u.streak_freezes_available
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?`
+      );
 
-    for (const rawToken of candidates) {
-      const tokenHash = hashSecret(rawToken);
-      const row = stmt.get(tokenHash, nowIso) as AuthenticatedRequest['authUser'] | undefined;
-      if (row && row.status !== 'suspended') {
-        req.authUser = row;
-        db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(nowIso, row.sessionId);
-        break;
+      for (const rawToken of candidates) {
+        const tokenHash = hashSecret(rawToken);
+        const row = await stmt.bind(tokenHash, nowIso).first<AuthenticatedRequest['authUser']>();
+        if (row && row.status !== 'suspended') {
+          req.authUser = row;
+          // Asynchronously update last_seen_at without blocking the request
+          db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').bind(nowIso, row.sessionId).run().catch(() => {});
+          break;
+        }
       }
+      next();
+    } catch (err) {
+      next(err);
     }
-    next();
   };
 }
 
@@ -287,22 +303,26 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   next();
 }
 
-export function checkRateLimit(
-  db: DatabaseSync,
+export async function checkRateLimit(
+  db: D1Database,
   key: string,
   limit: number,
   windowMs: number
-): { allowed: boolean; retryAfterSec: number } {
+): Promise<{ allowed: boolean; retryAfterSec: number }> {
   const nowMs = Date.now();
-  const row = db
+  const row = await db
     .prepare('SELECT count, window_start_ms FROM rate_limits WHERE bucket_key = ?')
-    .get(key) as { count: number; window_start_ms: number } | undefined;
+    .bind(key)
+    .first<{ count: number; window_start_ms: number }>();
 
   if (!row || nowMs - row.window_start_ms >= windowMs) {
-    db.prepare(
-      `INSERT INTO rate_limits (bucket_key, count, window_start_ms) VALUES (?, 1, ?)
-       ON CONFLICT(bucket_key) DO UPDATE SET count = 1, window_start_ms = excluded.window_start_ms`
-    ).run(key, nowMs);
+    await db
+      .prepare(
+        `INSERT INTO rate_limits (bucket_key, count, window_start_ms) VALUES (?, 1, ?)
+         ON CONFLICT(bucket_key) DO UPDATE SET count = 1, window_start_ms = excluded.window_start_ms`
+      )
+      .bind(key, nowMs)
+      .run();
     return { allowed: true, retryAfterSec: 0 };
   }
 
@@ -311,6 +331,6 @@ export function checkRateLimit(
     return { allowed: false, retryAfterSec };
   }
 
-  db.prepare('UPDATE rate_limits SET count = count + 1 WHERE bucket_key = ?').run(key);
+  await db.prepare('UPDATE rate_limits SET count = count + 1 WHERE bucket_key = ?').bind(key).run();
   return { allowed: true, retryAfterSec: 0 };
 }

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { DatabaseSync } from 'node:sqlite';
+import type { D1Database } from './db.ts';
 import { DEFAULT_GAMIFICATION_CONFIG, getSetting, type GamificationConfig } from './db.ts';
 
 export interface LevelProgress {
@@ -12,7 +12,7 @@ export interface LevelProgress {
   progressPct: number;
 }
 
-export function getGamificationConfig(db: DatabaseSync): GamificationConfig {
+export async function getGamificationConfig(db: D1Database): Promise<GamificationConfig> {
   return getSetting<GamificationConfig>(db, 'gamification_config', DEFAULT_GAMIFICATION_CONFIG);
 }
 
@@ -88,8 +88,8 @@ function diffDays(earlier: string, later: string): number {
   return Math.round((t2 - t1) / 86400000);
 }
 
-export function awardRewardEvent(
-  db: DatabaseSync,
+export async function awardRewardEvent(
+  db: D1Database,
   params: {
     userId: string;
     actionType: string;
@@ -99,15 +99,20 @@ export function awardRewardEvent(
     idempotencyKey: string;
     localDate?: string;
   }
-): { credited: boolean; xpDelta: number; coinDelta: number; levelUpBonusCoins: number; newLevel: number } {
-  const existing = db
+): Promise<{ credited: boolean; xpDelta: number; coinDelta: number; levelUpBonusCoins: number; newLevel: number }> {
+  const existing = await db
     .prepare('SELECT id FROM reward_events WHERE idempotency_key = ?')
-    .get(params.idempotencyKey);
+    .bind(params.idempotencyKey)
+    .first<{ id: string }>();
+
+  const cfg = await getGamificationConfig(db);
+
   if (existing) {
-    const userRow = db.prepare('SELECT xp_total FROM users WHERE id = ?').get(params.userId) as {
-      xp_total: number;
-    };
-    const cfg = getGamificationConfig(db);
+    const userRow = await db
+      .prepare('SELECT xp_total FROM users WHERE id = ?')
+      .bind(params.userId)
+      .first<{ xp_total: number }>();
+
     return {
       credited: false,
       xpDelta: 0,
@@ -119,20 +124,20 @@ export function awardRewardEvent(
 
   const now = new Date();
   const nowIso = now.toISOString();
-  const cfg = getGamificationConfig(db);
 
-  const userBefore = db
+  const userBefore = await db
     .prepare(
       'SELECT xp_total, weekly_xp, weekly_period_key, monthly_xp, monthly_period_key, coins_balance FROM users WHERE id = ?'
     )
-    .get(params.userId) as {
-    xp_total: number;
-    weekly_xp: number;
-    weekly_period_key: string;
-    monthly_xp: number;
-    monthly_period_key: string;
-    coins_balance: number;
-  };
+    .bind(params.userId)
+    .first<{
+      xp_total: number;
+      weekly_xp: number;
+      weekly_period_key: string;
+      monthly_xp: number;
+      monthly_period_key: string;
+      coins_balance: number;
+    }>();
 
   if (!userBefore) {
     throw new Error('User not found for reward event.');
@@ -155,66 +160,84 @@ export function awardRewardEvent(
     (userBefore.monthly_period_key === monthKey ? userBefore.monthly_xp : 0) + Math.max(0, params.xpDelta);
 
   const rewardId = crypto.randomUUID();
-  db.prepare(
-    `INSERT INTO reward_events (id, user_id, action_type, xp_delta, coin_delta, reference_id, idempotency_key, local_date, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    rewardId,
-    params.userId,
-    params.actionType,
-    Math.max(0, params.xpDelta),
-    totalCoinsToAdd,
-    params.referenceId || null,
-    params.idempotencyKey,
-    params.localDate || null,
-    nowIso
-  );
-
-  db.prepare(
-    `UPDATE users
-     SET xp_total = ?,
-         weekly_xp = ?,
-         weekly_period_key = ?,
-         monthly_xp = ?,
-         monthly_period_key = ?,
-         coins_balance = coins_balance + ?,
-         last_xp_reached_at = CASE WHEN ? > 0 THEN ? ELSE last_xp_reached_at END,
-         updated_at = ?
-     WHERE id = ?`
-  ).run(
-    newXpTotal,
-    nextWeeklyXp,
-    weekKey,
-    nextMonthlyXp,
-    monthKey,
-    totalCoinsToAdd,
-    params.xpDelta,
-    nowIso,
-    nowIso,
-    params.userId
-  );
+  const statements = [
+    db
+      .prepare(
+        `INSERT INTO reward_events (id, user_id, action_type, xp_delta, coin_delta, reference_id, idempotency_key, local_date, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        rewardId,
+        params.userId,
+        params.actionType,
+        Math.max(0, params.xpDelta),
+        totalCoinsToAdd,
+        params.referenceId || null,
+        params.idempotencyKey,
+        params.localDate || null,
+        nowIso
+      ),
+    db
+      .prepare(
+        `UPDATE users
+         SET xp_total = ?,
+             weekly_xp = ?,
+             weekly_period_key = ?,
+             monthly_xp = ?,
+             monthly_period_key = ?,
+             coins_balance = coins_balance + ?,
+             last_xp_reached_at = CASE WHEN ? > 0 THEN ? ELSE last_xp_reached_at END,
+             updated_at = ?
+         WHERE id = ?`
+      )
+      .bind(
+        newXpTotal,
+        nextWeeklyXp,
+        weekKey,
+        nextMonthlyXp,
+        monthKey,
+        totalCoinsToAdd,
+        params.xpDelta,
+        nowIso,
+        nowIso,
+        params.userId
+      ),
+  ];
 
   if (params.coinDelta > 0) {
-    db.prepare(
-      `INSERT INTO wallet_transactions (id, user_id, amount, reason, reference_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(crypto.randomUUID(), params.userId, params.coinDelta, params.actionType, params.referenceId || rewardId, nowIso);
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO wallet_transactions (id, user_id, amount, reason, reference_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .bind(crypto.randomUUID(), params.userId, params.coinDelta, params.actionType, params.referenceId || rewardId, nowIso)
+    );
   }
 
   if (levelUpBonusCoins > 0) {
-    db.prepare(
-      `INSERT INTO wallet_transactions (id, user_id, amount, reason, reference_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(crypto.randomUUID(), params.userId, levelUpBonusCoins, `level_up_${levelAfter}`, rewardId, nowIso);
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO wallet_transactions (id, user_id, amount, reason, reference_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .bind(crypto.randomUUID(), params.userId, levelUpBonusCoins, `level_up_${levelAfter}`, rewardId, nowIso)
+    );
   }
 
   if (params.localDate && params.xpDelta > 0) {
-    db.prepare(
-      `UPDATE study_activity_days SET xp_earned = xp_earned + ? WHERE user_id = ? AND local_date = ?`
-    ).run(params.xpDelta, params.userId, params.localDate);
+    statements.push(
+      db
+        .prepare(
+          `UPDATE study_activity_days SET xp_earned = xp_earned + ? WHERE user_id = ? AND local_date = ?`
+        )
+        .bind(params.xpDelta, params.userId, params.localDate)
+    );
   }
 
-  syncAchievementsForUser(db, params.userId);
+  await db.batch(statements);
+  await syncAchievementsForUser(db, params.userId);
 
   return {
     credited: true,
@@ -225,72 +248,93 @@ export function awardRewardEvent(
   };
 }
 
-export function recordQualifyingStudyActivity(
-  db: DatabaseSync,
+export async function recordQualifyingStudyActivity(
+  db: D1Database,
   userId: string,
   timezone: string,
   now = new Date()
-): { localDate: string; isFirstStudyOfDay: boolean; currentStreak: number; bestStreak: number; freezeUsed: boolean } {
+): Promise<{ localDate: string; isFirstStudyOfDay: boolean; currentStreak: number; bestStreak: number; freezeUsed: boolean }> {
   const localDate = getLocalDateString(timezone, now);
-  const cfg = getGamificationConfig(db);
+  const cfg = await getGamificationConfig(db);
 
-  const existingDay = db
+  const existingDay = await db
     .prepare('SELECT qualifying_actions FROM study_activity_days WHERE user_id = ? AND local_date = ?')
-    .get(userId, localDate) as { qualifying_actions: number } | undefined;
+    .bind(userId, localDate)
+    .first<{ qualifying_actions: number }>();
 
   if (existingDay) {
-    db.prepare(
-      'UPDATE study_activity_days SET qualifying_actions = qualifying_actions + 1 WHERE user_id = ? AND local_date = ?'
-    ).run(userId, localDate);
+    await db
+      .prepare(
+        'UPDATE study_activity_days SET qualifying_actions = qualifying_actions + 1 WHERE user_id = ? AND local_date = ?'
+      )
+      .bind(userId, localDate)
+      .run();
 
-    const u = db.prepare('SELECT current_streak, best_streak FROM users WHERE id = ?').get(userId) as {
-      current_streak: number;
-      best_streak: number;
-    };
+    const u = await db
+      .prepare('SELECT current_streak, best_streak FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{
+        current_streak: number;
+        best_streak: number;
+      }>();
+
     return {
       localDate,
       isFirstStudyOfDay: false,
-      currentStreak: u.current_streak,
-      bestStreak: u.best_streak,
+      currentStreak: u?.current_streak ?? 1,
+      bestStreak: u?.best_streak ?? 1,
       freezeUsed: false,
     };
   }
 
-  db.prepare(
-    `INSERT INTO study_activity_days (user_id, local_date, qualifying_actions, xp_earned, is_frozen)
-     VALUES (?, ?, 1, 0, 0)`
-  ).run(userId, localDate);
-
-  const user = db
+  const user = await db
     .prepare(
       'SELECT current_streak, best_streak, last_study_date, streak_freezes_available FROM users WHERE id = ?'
     )
-    .get(userId) as {
-    current_streak: number;
-    best_streak: number;
-    last_study_date: string | null;
-    streak_freezes_available: number;
-  };
+    .bind(userId)
+    .first<{
+      current_streak: number;
+      best_streak: number;
+      last_study_date: string | null;
+      streak_freezes_available: number;
+    }>();
+
+  if (!user) {
+    throw new Error('User not found while recording study activity.');
+  }
 
   let nextStreak = 1;
   let freezeUsed = false;
   let nextFreezes = user.streak_freezes_available;
+  const statements = [
+    db
+      .prepare(
+        `INSERT INTO study_activity_days (user_id, local_date, qualifying_actions, xp_earned, is_frozen)
+         VALUES (?, ?, 1, 0, 0)`
+      )
+      .bind(userId, localDate),
+  ];
 
   if (user.last_study_date) {
     const gap = diffDays(user.last_study_date, localDate);
     if (gap === 1) {
       nextStreak = user.current_streak + 1;
     } else if (gap === 2 && cfg.streakProtectionEnabled && user.streak_freezes_available > 0) {
-      // Preserve streak for 1 missed day using an owned streak freeze token (never falsifies study activity)
       const missedDate = addDaysToDateStr(localDate, -1);
-      db.prepare(
-        `INSERT OR IGNORE INTO study_activity_days (user_id, local_date, qualifying_actions, xp_earned, is_frozen)
-         VALUES (?, ?, 0, 0, 1)`
-      ).run(userId, missedDate);
-      db.prepare(
-        `UPDATE user_inventory SET quantity = MAX(0, quantity - 1)
-         WHERE user_id = ? AND item_id = 'utility_streak_freeze'`
-      ).run(userId);
+      statements.push(
+        db
+          .prepare(
+            `INSERT OR IGNORE INTO study_activity_days (user_id, local_date, qualifying_actions, xp_earned, is_frozen)
+             VALUES (?, ?, 0, 0, 1)`
+          )
+          .bind(userId, missedDate),
+        db
+          .prepare(
+            `UPDATE user_inventory SET quantity = MAX(0, quantity - 1)
+             WHERE user_id = ? AND item_id = 'utility_streak_freeze'`
+          )
+          .bind(userId)
+      );
       nextFreezes -= 1;
       nextStreak = user.current_streak + 1;
       freezeUsed = true;
@@ -304,17 +348,22 @@ export function recordQualifyingStudyActivity(
   const nextBest = Math.max(user.best_streak, nextStreak);
   const nowIso = now.toISOString();
 
-  db.prepare(
-    `UPDATE users
-     SET current_streak = ?,
-         best_streak = ?,
-         last_study_date = ?,
-         streak_freezes_available = ?,
-         updated_at = ?
-     WHERE id = ?`
-  ).run(nextStreak, nextBest, localDate, nextFreezes, nowIso, userId);
+  statements.push(
+    db
+      .prepare(
+        `UPDATE users
+         SET current_streak = ?,
+             best_streak = ?,
+             last_study_date = ?,
+             streak_freezes_available = ?,
+             updated_at = ?
+         WHERE id = ?`
+      )
+      .bind(nextStreak, nextBest, localDate, nextFreezes, nowIso, userId)
+  );
 
-  syncAchievementsForUser(db, userId);
+  await db.batch(statements);
+  await syncAchievementsForUser(db, userId);
 
   return {
     localDate,
@@ -325,48 +374,59 @@ export function recordQualifyingStudyActivity(
   };
 }
 
-export function syncAchievementsForUser(db: DatabaseSync, userId: string): void {
-  const user = db
+export async function syncAchievementsForUser(db: D1Database, userId: string): Promise<void> {
+  const user = await db
     .prepare('SELECT status, email_verified, xp_total, best_streak FROM users WHERE id = ?')
-    .get(userId) as
-    | { status: string; email_verified: number; xp_total: number; best_streak: number }
-    | undefined;
+    .bind(userId)
+    .first<{ status: string; email_verified: number; xp_total: number; best_streak: number }>();
+
   if (!user) return;
 
-  const studyDaysRow = db
-    .prepare('SELECT COUNT(*) AS cnt FROM study_activity_days WHERE user_id = ? AND qualifying_actions > 0')
-    .get(userId) as { cnt: number };
-  const sessionsRow = db
-    .prepare('SELECT COUNT(*) AS cnt FROM practice_sessions WHERE user_id = ?')
-    .get(userId) as { cnt: number };
-  const itemsRow = db
-    .prepare('SELECT COUNT(*) AS cnt FROM user_inventory WHERE user_id = ? AND quantity > 0')
-    .get(userId) as { cnt: number };
+  const [studyDaysRow, sessionsRow, itemsRow, allAchResult] = await Promise.all([
+    db
+      .prepare('SELECT COUNT(*) AS cnt FROM study_activity_days WHERE user_id = ? AND qualifying_actions > 0')
+      .bind(userId)
+      .first<{ cnt: number }>(),
+    db
+      .prepare('SELECT COUNT(*) AS cnt FROM practice_sessions WHERE user_id = ?')
+      .bind(userId)
+      .first<{ cnt: number }>(),
+    db
+      .prepare('SELECT COUNT(*) AS cnt FROM user_inventory WHERE user_id = ? AND quantity > 0')
+      .bind(userId)
+      .first<{ cnt: number }>(),
+    db
+      .prepare('SELECT id, metric_key, threshold FROM achievements')
+      .all<{ id: string; metric_key: string; threshold: number }>(),
+  ]);
 
   const metrics: Record<string, number> = {
     account_active: user.status === 'active' ? 1 : 0,
     xp_total: user.xp_total,
     best_streak: user.best_streak,
-    study_days: studyDaysRow.cnt,
-    sessions_completed: sessionsRow.cnt,
-    items_owned: itemsRow.cnt,
+    study_days: studyDaysRow?.cnt ?? 0,
+    sessions_completed: sessionsRow?.cnt ?? 0,
+    items_owned: itemsRow?.cnt ?? 0,
   };
 
-  const allAch = db.prepare('SELECT id, metric_key, threshold FROM achievements').all() as Array<{
-    id: string;
-    metric_key: string;
-    threshold: number;
-  }>;
-
+  const allAch = allAchResult.results;
   const nowIso = new Date().toISOString();
-  const insertUnlock = db.prepare(
-    'INSERT OR IGNORE INTO user_achievements (id, user_id, achievement_id, unlocked_at) VALUES (?, ?, ?, ?)'
-  );
+  const unlockStatements = [];
 
   for (const ach of allAch) {
     const val = metrics[ach.metric_key] ?? 0;
     if (val >= ach.threshold) {
-      insertUnlock.run(crypto.randomUUID(), userId, ach.id, nowIso);
+      unlockStatements.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO user_achievements (id, user_id, achievement_id, unlocked_at) VALUES (?, ?, ?, ?)'
+          )
+          .bind(crypto.randomUUID(), userId, ach.id, nowIso)
+      );
     }
+  }
+
+  if (unlockStatements.length > 0) {
+    await db.batch(unlockStatements);
   }
 }

@@ -4,8 +4,21 @@ export interface MailResult {
   error?: string;
 }
 
+export function getEnvSecret(key: string): string {
+  try {
+    const globalAny = globalThis as any;
+    if (globalAny.__CF_ENV__?.[key]) {
+      return String(globalAny.__CF_ENV__[key]).trim();
+    }
+  } catch {}
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return String(process.env[key]).trim();
+  }
+  return '';
+}
+
 function getAppUrl(fallbackOrigin?: string): string {
-  const configured = process.env.APP_URL;
+  const configured = getEnvSecret('APP_URL');
   if (configured && configured !== 'MY_APP_URL' && /^https?:\/\//i.test(configured)) {
     return configured.replace(/\/+$/, '');
   }
@@ -16,9 +29,9 @@ function getAppUrl(fallbackOrigin?: string): string {
 }
 
 export function getMailtrapStatus() {
-  const token = process.env.MAILTRAP_API_TOKEN?.trim() || '';
-  const sender = process.env.MAILTRAP_SENDER_EMAIL?.trim() || '';
-  const sandboxInboxId = process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim() || '';
+  const token = getEnvSecret('MAILTRAP_API_TOKEN');
+  const sender = getEnvSecret('MAILTRAP_SENDER_EMAIL');
+  const sandboxInboxId = getEnvSecret('MAILTRAP_SANDBOX_INBOX_ID');
   return {
     configured: Boolean(token),
     mode: token ? (sandboxInboxId ? 'sandbox' : 'production') : 'unconfigured',
@@ -35,7 +48,7 @@ async function sendMailtrapEmail(params: {
   html: string;
   category: string;
 }): Promise<MailResult> {
-  const token = process.env.MAILTRAP_API_TOKEN?.trim();
+  const token = getEnvSecret('MAILTRAP_API_TOKEN');
   if (!token) {
     return {
       delivered: false,
@@ -44,8 +57,8 @@ async function sendMailtrapEmail(params: {
     };
   }
 
-  const sandboxInboxId = process.env.MAILTRAP_SANDBOX_INBOX_ID?.trim();
-  const senderEmail = process.env.MAILTRAP_SENDER_EMAIL?.trim() || 'noreply@sprachwerk.academy';
+  const sandboxInboxId = getEnvSecret('MAILTRAP_SANDBOX_INBOX_ID');
+  const senderEmail = getEnvSecret('MAILTRAP_SENDER_EMAIL') || 'noreply@sprachwerk.academy';
   const endpoint = sandboxInboxId
     ? `https://sandbox.api.mailtrap.io/api/send/${encodeURIComponent(sandboxInboxId)}`
     : 'https://send.api.mailtrap.io/api/send';

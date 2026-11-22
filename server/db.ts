@@ -1,9 +1,40 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { SCHEMA_STATEMENTS } from './schema.ts';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-const DB_PATH = path.join(DATA_DIR, 'sprachwerk.db');
+export interface D1ResultMeta {
+  changes?: number;
+  last_row_id?: number;
+  duration?: number;
+  rows_read?: number;
+  rows_written?: number;
+}
+
+export interface D1Response {
+  success: boolean;
+  meta: D1ResultMeta;
+  error?: string;
+}
+
+export interface D1Result<T = Record<string, unknown>> {
+  results: T[];
+  success: boolean;
+  meta: D1ResultMeta;
+  error?: string;
+}
+
+export interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = Record<string, unknown>>(colName?: string): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
+  run<T = Record<string, unknown>>(): Promise<D1Response>;
+  raw<T = unknown[]>(): Promise<T[]>;
+}
+
+export interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  dump?(): Promise<ArrayBuffer>;
+  batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+  exec(query: string): Promise<{ count: number; duration: number }>;
+}
 
 export interface GamificationConfig {
   xpPerLessonFirst: number;
@@ -47,49 +78,199 @@ export const DEFAULT_GAMIFICATION_CONFIG: GamificationConfig = {
   maxStreakFreezesHeld: 2,
 };
 
-export const DEFAULT_AUTH_CONFIG: AuthConfig = {
-  requireEmailVerification: Boolean(process.env.MAILTRAP_API_TOKEN),
-};
-
-let dbInstance: DatabaseSync | null = null;
-
-export function getDb(): DatabaseSync {
-  if (dbInstance) return dbInstance;
-
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  const db = new DatabaseSync(DB_PATH);
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA foreign_keys = ON;');
-
-  const schemaPath = path.resolve(process.cwd(), 'cloudflare', 'schema.sql');
-  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-  db.exec(schemaSql);
-
-  seedDefaults(db);
-  dbInstance = db;
-  return db;
+export function getDefaultAuthConfig(): AuthConfig {
+  const cfEnv = (globalThis as any).__CF_ENV__;
+  const token =
+    (cfEnv?.MAILTRAP_API_TOKEN ? String(cfEnv.MAILTRAP_API_TOKEN).trim() : '') ||
+    (typeof process !== 'undefined' && process.env?.MAILTRAP_API_TOKEN ? process.env.MAILTRAP_API_TOKEN.trim() : '');
+  return {
+    requireEmailVerification: Boolean(token),
+  };
 }
 
-function seedDefaults(db: DatabaseSync) {
+export const DEFAULT_AUTH_CONFIG: AuthConfig = {
+  requireEmailVerification: false,
+};
+
+let activeDb: D1Database | null = null;
+let initPromise: Promise<void> | null = null;
+
+export function setDatabaseInstance(db: D1Database): void {
+  activeDb = db;
+}
+
+/**
+ * Creates an in-memory D1-compatible adapter for local Node testing when Cloudflare env.DB is not bound.
+ * This guarantees no local SQLite file is ever created or required.
+ */
+async function createInMemoryD1(): Promise<D1Database> {
+  const { DatabaseSync } = await import('node:sqlite');
+  const mem = new DatabaseSync(':memory:');
+  mem.exec('PRAGMA foreign_keys = ON;');
+
+  const adapter: D1Database = {
+    prepare(query: string): D1PreparedStatement {
+      let boundValues: unknown[] = [];
+      const prepared: D1PreparedStatement = {
+        bind(...values: unknown[]) {
+          boundValues = values.map((v) => (v === undefined ? null : v));
+          return prepared;
+        },
+        async first<T = Record<string, unknown>>(colName?: string): Promise<T | null> {
+          const stmt = mem.prepare(query);
+          const row = stmt.get(...(boundValues as any[])) as Record<string, unknown> | undefined;
+          if (!row) return null;
+          if (colName) return (row[colName] ?? null) as T;
+          return row as T;
+        },
+        async all<T = Record<string, unknown>>(): Promise<D1Result<T>> {
+          const stmt = mem.prepare(query);
+          const rows = stmt.all(...(boundValues as any[])) as T[];
+          return {
+            results: rows,
+            success: true,
+            meta: {
+              changes: 0,
+              last_row_id: 0,
+              duration: 0,
+              rows_read: rows.length,
+              rows_written: 0,
+            },
+          };
+        },
+        async run<T = Record<string, unknown>>(): Promise<D1Response> {
+          const stmt = mem.prepare(query);
+          const info = stmt.run(...(boundValues as any[]));
+          return {
+            success: true,
+            meta: {
+              changes: Number(info.changes || 0),
+              last_row_id: Number(info.lastInsertRowid || 0),
+              duration: 0,
+              rows_read: 0,
+              rows_written: Number(info.changes || 0),
+            },
+          };
+        },
+        async raw<T = unknown[]>(): Promise<T[]> {
+          const stmt = mem.prepare(query);
+          const rows = stmt.all(...(boundValues as any[])) as Record<string, unknown>[];
+          return rows.map((r) => Object.values(r)) as T[];
+        },
+      };
+      return prepared;
+    },
+    async batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> {
+      mem.exec('BEGIN IMMEDIATE');
+      try {
+        const results: D1Result<T>[] = [];
+        for (const s of statements) {
+          const res = await s.all<T>();
+          results.push(res);
+        }
+        mem.exec('COMMIT');
+        return results;
+      } catch (err) {
+        try {
+          mem.exec('ROLLBACK');
+        } catch {
+          // ignore
+        }
+        throw err;
+      }
+    },
+    async exec(rawQuery: string): Promise<{ count: number; duration: number }> {
+      mem.exec(rawQuery);
+      return { count: 1, duration: 0 };
+    },
+  };
+
+  return adapter;
+}
+
+export function getDb(): D1Database {
+  if (activeDb) return activeDb;
+
+  // 1. Check global Cloudflare Workers env
+  try {
+    const globalAny = globalThis as any;
+    if (globalAny.__CF_ENV__?.DB) {
+      activeDb = globalAny.__CF_ENV__.DB;
+      return activeDb!;
+    }
+  } catch {}
+
+  // 2. Synchronous fallback if already initialized or will be set by middleware
+  if (!activeDb) {
+    throw new Error('D1Database not initialized. Ensure Cloudflare binding "DB" is configured.');
+  }
+
+  return activeDb;
+}
+
+export async function resolveDb(explicitEnv?: { DB?: D1Database }): Promise<D1Database> {
+  if (activeDb) return activeDb;
+
+  if (explicitEnv?.DB) {
+    activeDb = explicitEnv.DB;
+    return activeDb;
+  }
+
+  try {
+    const globalAny = globalThis as any;
+    if (globalAny.__CF_ENV__?.DB) {
+      activeDb = globalAny.__CF_ENV__.DB;
+      return activeDb!;
+    }
+  } catch {}
+
+  try {
+    const cf = await import('cloudflare:workers');
+    if ((cf.env as any)?.DB) {
+      activeDb = (cf.env as any).DB;
+      return activeDb!;
+    }
+  } catch {}
+
+  // Local fallback: in-memory D1 (no local SQLite file on disk)
+  activeDb = await createInMemoryD1();
+  return activeDb;
+}
+
+export async function ensureDbInitialized(db: D1Database): Promise<void> {
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      // 1. Create tables and indexes via D1-compatible batch execution
+      await db.batch(SCHEMA_STATEMENTS.map((sql) => db.prepare(sql)));
+
+      // 2. Seed default configuration and initial shop items & achievements
+      await seedDefaults(db);
+    } catch (err) {
+      initPromise = null;
+      throw err;
+    }
+  })();
+
+  return initPromise;
+}
+
+export async function seedDefaults(db: D1Database): Promise<void> {
   const now = new Date().toISOString();
 
   // Seed configurable gamification economy & auth settings
-  const insertSetting = db.prepare(
-    'INSERT OR IGNORE INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)'
-  );
-  insertSetting.run('gamification_config', JSON.stringify(DEFAULT_GAMIFICATION_CONFIG), now);
-  insertSetting.run('auth_config', JSON.stringify(DEFAULT_AUTH_CONFIG), now);
+  await db
+    .prepare('INSERT OR IGNORE INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)')
+    .bind('gamification_config', JSON.stringify(DEFAULT_GAMIFICATION_CONFIG), now)
+    .run();
 
-  // Seed Virtual Shop items across all 5 PDF categories (no real money, cosmetic/utility only)
-  const insertShopItem = db.prepare(`
-    INSERT OR IGNORE INTO shop_items
-    (id, category, name_i18n, description_i18n, price_coins, image_key, availability, effect_type, effect_value, is_consumable, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  await db
+    .prepare('INSERT OR IGNORE INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)')
+    .bind('auth_config', JSON.stringify(getDefaultAuthConfig()), now)
+    .run();
 
+  // Seed Virtual Shop items across all 5 PDF categories
   const shopItems = [
     {
       id: 'avatar_owl_scholar',
@@ -534,29 +715,30 @@ function seedDefaults(db: DatabaseSync) {
     },
   ];
 
-  for (const item of shopItems) {
-    insertShopItem.run(
-      item.id,
-      item.category,
-      JSON.stringify(item.name_i18n),
-      JSON.stringify(item.description_i18n),
-      item.price_coins,
-      item.image_key,
-      item.availability,
-      item.effect_type,
-      item.effect_value,
-      item.is_consumable,
-      item.sort_order
-    );
-  }
+  const shopStatements = shopItems.map((item) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO shop_items
+         (id, category, name_i18n, description_i18n, price_coins, image_key, availability, effect_type, effect_value, is_consumable, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        item.id,
+        item.category,
+        JSON.stringify(item.name_i18n),
+        JSON.stringify(item.description_i18n),
+        item.price_coins,
+        item.image_key,
+        item.availability,
+        item.effect_type,
+        item.effect_value,
+        item.is_consumable,
+        item.sort_order
+      )
+  );
+  await db.batch(shopStatements);
 
-  // Seed Achievements tied strictly to real user actions & stored progress
-  const insertAchievement = db.prepare(`
-    INSERT OR IGNORE INTO achievements
-    (id, code, category, name_i18n, description_i18n, coin_reward, metric_key, threshold, icon_key, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
+  // Seed Achievements
   const achievements = [
     {
       id: 'ach_first_step',
@@ -688,38 +870,49 @@ function seedDefaults(db: DatabaseSync) {
     },
   ];
 
-  for (const a of achievements) {
-    insertAchievement.run(
-      a.id,
-      a.code,
-      a.category,
-      JSON.stringify(a.name_i18n),
-      JSON.stringify(a.description_i18n),
-      a.coin_reward,
-      a.metric_key,
-      a.threshold,
-      a.icon_key,
-      a.sort_order
-    );
-  }
+  const achStatements = achievements.map((a) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO achievements
+         (id, code, category, name_i18n, description_i18n, coin_reward, metric_key, threshold, icon_key, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        a.id,
+        a.code,
+        a.category,
+        JSON.stringify(a.name_i18n),
+        JSON.stringify(a.description_i18n),
+        a.coin_reward,
+        a.metric_key,
+        a.threshold,
+        a.icon_key,
+        a.sort_order
+      )
+  );
+  await db.batch(achStatements);
 }
 
-export function getSetting<T>(db: DatabaseSync, key: string, fallback: T): T {
-  const row = db.prepare('SELECT value_json FROM app_settings WHERE key = ?').get(key) as
-    | { value_json: string }
-    | undefined;
-  if (!row) return fallback;
+export async function getSetting<T>(db: D1Database, key: string, fallback: T): Promise<T> {
   try {
+    const row = await db
+      .prepare('SELECT value_json FROM app_settings WHERE key = ?')
+      .bind(key)
+      .first<{ value_json: string }>();
+    if (!row) return fallback;
     return JSON.parse(row.value_json) as T;
   } catch {
     return fallback;
   }
 }
 
-export function setSetting<T>(db: DatabaseSync, key: string, value: T): void {
+export async function setSetting<T>(db: D1Database, key: string, value: T): Promise<void> {
   const now = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`
-  ).run(key, JSON.stringify(value), now);
+  await db
+    .prepare(
+      `INSERT INTO app_settings (key, value_json, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`
+    )
+    .bind(key, JSON.stringify(value), now)
+    .run();
 }
