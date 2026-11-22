@@ -1,20 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import {
   Award,
+  BarChart3,
   Check,
   Coins,
   Download,
+  GraduationCap,
   KeyRound,
+  LogOut,
   Monitor,
   Pencil,
   Plus,
+  Settings,
   ShieldAlert,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
   Trash2,
+  Trophy,
   X,
 } from 'lucide-react';
 import {
+  BrandMark,
   isAnimatedCosmeticKey,
   ShopItemPreview,
   UserAvatar,
@@ -39,12 +46,11 @@ interface SessionRow {
 }
 
 export const ProfileSettingsView: React.FC = () => {
-  const { user, lang, setLangLocal, theme, setThemeLocal, refreshUser, setUser, pushToast, setScreen } = useApp();
+  const { user, lang, setLangLocal, theme, setThemeLocal, refreshUser, setUser, signOut, pushToast, setScreen } = useApp();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [selectedLang, setSelectedLang] = useState<InterfaceLang>(lang);
   const [selectedTheme, setSelectedTheme] = useState<ThemeMode>(theme);
-  const [timezone, setTimezone] = useState(user?.timezone || 'UTC');
   const [leaderboardVisible, setLeaderboardVisible] = useState(user?.leaderboardVisible ?? true);
   const [reducedMotion, setReducedMotion] = useState(user?.reducedMotion ?? false);
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -54,8 +60,10 @@ export const ProfileSettingsView: React.FC = () => {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
 
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [customizeTab, setCustomizeTab] = useState<CustomizeCategory>('avatars');
   const [equippingId, setEquippingId] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
 
   // Security forms
   const [currentPassword, setCurrentPassword] = useState('');
@@ -132,7 +140,6 @@ export const ProfileSettingsView: React.FC = () => {
           displayName: displayName.trim(),
           interfaceLang: selectedLang,
           theme: selectedTheme,
-          timezone: timezone.trim(),
           leaderboardVisible,
           reducedMotion,
         },
@@ -316,6 +323,22 @@ export const ProfileSettingsView: React.FC = () => {
               <Pencil size={14} />
               <span>{t(lang, 'customizeProfileBtn')}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setShowSettings((prev) => !prev)}
+              aria-expanded={showSettings}
+              aria-label={t(lang, 'settingsToggleBtn')}
+              title={t(lang, 'settingsToggleBtn')}
+              className={`inline-flex items-center justify-center p-2.5 rounded-xl text-xs font-semibold cursor-pointer min-h-[44px] min-w-[44px] transition-colors ${
+                showSettings
+                  ? 'bg-[#DD0000] border border-[#DD0000] text-white'
+                  : hasBanner
+                  ? 'bg-white/15 hover:bg-white/25 text-white border border-white/25 backdrop-blur-xs'
+                  : 'border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 hover:border-[#DD0000] text-neutral-900 dark:text-white'
+              }`}
+            >
+              <Settings size={16} />
+            </button>
             <PWAInstallButton compact />
           </div>
         </div>
@@ -326,135 +349,269 @@ export const ProfileSettingsView: React.FC = () => {
         <button
           type="button"
           onClick={() => setScreen('leaderboard')}
-          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
         >
-          {t(lang, 'navLeaderboard')}
+          <Trophy size={16} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
+          <span className="truncate">{t(lang, 'navLeaderboard')}</span>
         </button>
         <button
           type="button"
           onClick={() => setScreen('statistics')}
-          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
         >
-          {t(lang, 'navStatistics')}
+          <BarChart3 size={16} className="text-neutral-700 dark:text-neutral-300 shrink-0" />
+          <span className="truncate">{t(lang, 'navStatistics')}</span>
         </button>
         <button
           type="button"
           onClick={() => setScreen('lesson_practice')}
-          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px]"
+          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
         >
-          {t(lang, 'navLessonPractice')}
+          <GraduationCap size={16} className="text-neutral-700 dark:text-neutral-300 shrink-0" />
+          <span className="truncate">{t(lang, 'navLessonPractice')}</span>
         </button>
         {user.role === 'admin' && (
           <button
             type="button"
             onClick={() => setScreen('admin')}
-            className="p-3 rounded-xl border border-[#DD0000]/40 bg-[#DD0000]/5 text-xs font-semibold text-[#DD0000] dark:text-[#FFCE00] text-left cursor-pointer min-h-[44px]"
+            className="p-3 rounded-xl border border-[#DD0000]/40 bg-[#DD0000]/5 text-xs font-semibold text-[#DD0000] dark:text-[#FFCE00] text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-[#DD0000] transition-colors"
           >
-            {t(lang, 'navAdmin')}
+            <ShieldCheck size={16} className="shrink-0" />
+            <span className="truncate">{t(lang, 'navAdmin')}</span>
           </button>
         )}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Settings Form */}
-        <form
-          onSubmit={handleSavePrefs}
-          className="lg:col-span-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 space-y-4"
-        >
-          <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-            {t(lang, 'profileTitle')}
-          </h3>
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-              {t(lang, 'displayNameLabel')}
-            </label>
-            <input
-              type="text"
-              required
-              minLength={2}
-              maxLength={32}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
-            />
+      {showSettings && (
+        <section className="space-y-6">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <Settings size={17} className="text-[#DD0000] dark:text-[#FFCE00] shrink-0" />
+              <span>{t(lang, 'settingsSectionTitle')}</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowSettings(false)}
+              aria-label={t(lang, 'close')}
+              className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+            >
+              <X size={16} />
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                {t(lang, 'languageLabel')}
-              </label>
-              <select
-                value={selectedLang}
-                onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
-                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
-              >
-                <option value="fr">Français (fr)</option>
-                <option value="en">English (en)</option>
-                <option value="de">Deutsch (de)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                {t(lang, 'themeLabel')}
-              </label>
-              <select
-                value={selectedTheme}
-                onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
-                className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
-              >
-                <option value="light">{t(lang, 'themeLight')}</option>
-                <option value="dark">{t(lang, 'themeDark')}</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-              {t(lang, 'timezoneLabel')}
-            </label>
-            <input
-              type="text"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              placeholder="Europe/Berlin"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm font-mono-tabular text-neutral-900 dark:text-white"
-            />
-          </div>
-
-          <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={leaderboardVisible}
-              onChange={(e) => setLeaderboardVisible(e.target.checked)}
-              className="accent-[#DD0000]"
-            />
-            <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
-          </label>
-
-          <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={reducedMotion}
-              onChange={(e) => setReducedMotion(e.target.checked)}
-              className="accent-[#DD0000]"
-            />
-            <span>{t(lang, 'reducedMotionLabel')}</span>
-          </label>
-
-          <button
-            type="submit"
-            disabled={savingPrefs}
-            className="px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+          {/* Profile, Inventory & Settings Form */}
+          <form
+            onSubmit={handleSavePrefs}
+            className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4"
           >
-            {savingPrefs ? t(lang, 'savingText') : t(lang, 'saveSettings')}
-          </button>
-        </form>
+            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
+              {t(lang, 'profileTitle')}
+            </h3>
 
-        {/* Owned Inventory */}
-        <div className="lg:col-span-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                {t(lang, 'displayNameLabel')}
+              </label>
+              <input
+                type="text"
+                required
+                minLength={2}
+                maxLength={32}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t(lang, 'languageLabel')}
+                </label>
+                <select
+                  value={selectedLang}
+                  onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                >
+                  <option value="fr">Français (fr)</option>
+                  <option value="en">English (en)</option>
+                  <option value="de">Deutsch (de)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t(lang, 'themeLabel')}
+                </label>
+                <select
+                  value={selectedTheme}
+                  onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                >
+                  <option value="light">{t(lang, 'themeLight')}</option>
+                  <option value="dark">{t(lang, 'themeDark')}</option>
+                </select>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={leaderboardVisible}
+                onChange={(e) => setLeaderboardVisible(e.target.checked)}
+                className="accent-[#DD0000]"
+              />
+              <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
+            </label>
+
+            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={reducedMotion}
+                onChange={(e) => setReducedMotion(e.target.checked)}
+                className="accent-[#DD0000]"
+              />
+              <span>{t(lang, 'reducedMotionLabel')}</span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={savingPrefs}
+              className="px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+            >
+              {savingPrefs ? t(lang, 'savingText') : t(lang, 'saveSettings')}
+            </button>
+          </form>
+
+          {/* Change Password & Active Sessions */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <form
+              onSubmit={handleChangePassword}
+              className="lg:col-span-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-3"
+            >
+              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <KeyRound size={16} />
+                <span>{t(lang, 'changePasswordTitle')}</span>
+              </h3>
+              <input
+                type="password"
+                required
+                placeholder={t(lang, 'currentPasswordPlaceholder')}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+              />
+              <input
+                type="password"
+                required
+                minLength={8}
+                placeholder={t(lang, 'newPasswordMinPlaceholder')}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+              />
+              <input
+                type="password"
+                required
+                minLength={8}
+                placeholder={t(lang, 'confirmNewPasswordPlaceholder')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer min-h-[44px]"
+              >
+                {t(lang, 'updatePasswordBtn')}
+              </button>
+            </form>
+
+            <div className="lg:col-span-7 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Monitor size={16} />
+                  <span>{t(lang, 'activeSessionsTitle')}</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleRevokeOtherSessions}
+                  className="text-xs font-semibold text-[#DD0000] hover:underline cursor-pointer"
+                >
+                  {t(lang, 'revokeOthers')}
+                </button>
+              </div>
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-48 overflow-y-auto">
+                {sessions.map((s) => (
+                  <div key={s.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-medium text-neutral-900 dark:text-white truncate">
+                        {s.isCurrent ? t(lang, 'currentSessionLabel') : t(lang, 'activeSessionLabel')} · {s.ip_prefix || 'local'}
+                      </div>
+                      <div className="text-neutral-500 truncate">{s.user_agent || t(lang, 'browserLabel')}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeSession(s.id)}
+                      className="text-neutral-500 hover:text-[#DD0000] font-semibold shrink-0 cursor-pointer"
+                    >
+                      {t(lang, 'revokeBtn')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white cursor-pointer min-h-[44px]"
+                >
+                  <Download size={14} />
+                  <span>{t(lang, 'exportJsonBtn')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DD0000] cursor-pointer min-h-[44px]"
+                >
+                  <Trash2 size={14} />
+                  <span>{t(lang, 'deleteAccountBtn')}</span>
+                </button>
+              </div>
+
+              {showDeleteConfirm && (
+                <form onSubmit={handleDeleteAccount} className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
+                    <ShieldAlert size={15} className="shrink-0" />
+                    <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      type="password"
+                      required
+                      placeholder={t(lang, 'deletePasswordPlaceholder')}
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer min-h-[40px]"
+                    >
+                      {t(lang, 'confirmDeleteBtn')}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Owned Inventory */}
+      <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
               {t(lang, 'inventoryTitle')}
@@ -527,8 +684,7 @@ export const ProfileSettingsView: React.FC = () => {
               })}
             </div>
           )}
-        </div>
-      </div>
+      </section>
 
       {/* Achievements */}
       <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 space-y-4">
@@ -579,129 +735,90 @@ export const ProfileSettingsView: React.FC = () => {
         </div>
       </section>
 
-      {/* Account Security, Sessions, JSON Export & Account Deletion */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <form
-          onSubmit={handleChangePassword}
-          className="lg:col-span-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-3"
-        >
-          <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-            <KeyRound size={16} />
-            <span>{t(lang, 'changePasswordTitle')}</span>
-          </h3>
-          <input
-            type="password"
-            required
-            placeholder={t(lang, 'currentPasswordPlaceholder')}
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-          />
-          <input
-            type="password"
-            required
-            minLength={8}
-            placeholder={t(lang, 'newPasswordMinPlaceholder')}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-          />
-          <input
-            type="password"
-            required
-            minLength={8}
-            placeholder={t(lang, 'confirmNewPasswordPlaceholder')}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer min-h-[42px]"
-          >
-            {t(lang, 'updatePasswordBtn')}
-          </button>
-        </form>
-
-        <div className="lg:col-span-7 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-              <Monitor size={16} />
-              <span>{t(lang, 'activeSessionsTitle')}</span>
-            </h3>
-            <button
-              type="button"
-              onClick={handleRevokeOtherSessions}
-              className="text-xs font-semibold text-[#DD0000] hover:underline cursor-pointer"
-            >
-              {t(lang, 'revokeOthers')}
-            </button>
-          </div>
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-48 overflow-y-auto">
-            {sessions.map((s) => (
-              <div key={s.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                <div className="min-w-0">
-                  <div className="font-medium text-neutral-900 dark:text-white truncate">
-                    {s.isCurrent ? t(lang, 'currentSessionLabel') : t(lang, 'activeSessionLabel')} · {s.ip_prefix || 'local'}
-                  </div>
-                  <div className="text-neutral-500 truncate">{s.user_agent || t(lang, 'browserLabel')}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRevokeSession(s.id)}
-                  className="text-neutral-500 hover:text-[#DD0000] font-semibold shrink-0 cursor-pointer"
-                >
-                  {t(lang, 'revokeBtn')}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleExportJson}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white cursor-pointer min-h-[40px]"
-            >
-              <Download size={14} />
-              <span>{t(lang, 'exportJsonBtn')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DD0000] cursor-pointer"
-            >
-              <Trash2 size={14} />
-              <span>{t(lang, 'deleteAccountBtn')}</span>
-            </button>
-          </div>
-
-          {showDeleteConfirm && (
-            <form onSubmit={handleDeleteAccount} className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
-                <ShieldAlert size={15} className="shrink-0" />
-                <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  type="password"
-                  required
-                  placeholder={t(lang, 'deletePasswordPlaceholder')}
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer"
-                >
-                  {t(lang, 'confirmDeleteBtn')}
-                </button>
-              </div>
-            </form>
+      {/* About Webapp Footer Info */}
+      <footer className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
+        <div className="flex items-center gap-3.5">
+          {!logoError ? (
+            <img
+              src="/icon.svg"
+              alt="SPRACHWERK Logo"
+              referrerPolicy="no-referrer"
+              onError={() => setLogoError(true)}
+              className="w-11 h-11 rounded-xl shrink-0 border border-neutral-200 dark:border-neutral-800"
+            />
+          ) : (
+            <div className="w-11 h-11 rounded-xl bg-neutral-950 flex items-center justify-center shrink-0 border border-neutral-800">
+              <BrandMark />
+            </div>
           )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <BrandMark size="sm" />
+              <span className="font-display font-extrabold tracking-tight text-base text-neutral-900 dark:text-white">
+                {t(lang, 'brandName')}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              {t(lang, 'brandSubtitle')}
+            </p>
+          </div>
         </div>
+
+        <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+          {t(lang, 'heroAuthDesc')}
+        </p>
+
+        <div className="divide-y divide-neutral-100 dark:divide-neutral-800 text-xs">
+          <div className="py-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'createdByLabel')}</span>
+            <span className="font-semibold text-neutral-900 dark:text-white text-right">
+              {t(lang, 'createdByAuthor')}
+            </span>
+          </div>
+          <div className="py-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'heroScopeLabel')}</span>
+            <span className="font-mono-tabular text-neutral-800 dark:text-neutral-200 text-right">
+              {t(lang, 'heroScopeValue')}
+            </span>
+          </div>
+          <div className="py-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'heroModesLabel')}</span>
+            <span className="font-mono-tabular text-neutral-800 dark:text-neutral-200 text-right">
+              {t(lang, 'heroModesValue')}
+            </span>
+          </div>
+          <div className="py-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'heroLangsLabel')}</span>
+            <span className="font-mono-tabular text-neutral-800 dark:text-neutral-200 text-right">
+              {t(lang, 'heroLangsValue')}
+            </span>
+          </div>
+          <div className="py-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'aboutOfflineLabel')}</span>
+            <span className="font-mono-tabular text-neutral-800 dark:text-neutral-200 text-right">
+              {t(lang, 'aboutOfflineValue')}
+            </span>
+          </div>
+          <div className="pt-2 flex items-center justify-between gap-4">
+            <span className="text-neutral-500 dark:text-neutral-400">{t(lang, 'aboutPlatformLabel')}</span>
+            <span className="text-neutral-800 dark:text-neutral-200 text-right">
+              {t(lang, 'aboutPlatformValue')}
+            </span>
+          </div>
+        </div>
+      </footer>
+
+      {/* Mobile Log Out Button */}
+      <div className="lg:hidden flex justify-center pt-1">
+        <button
+          type="button"
+          onClick={signOut}
+          aria-label={t(lang, 'signOut')}
+          title={t(lang, 'signOut')}
+          className="inline-flex items-center justify-center p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-[#DD0000] hover:bg-[#DD0000]/10 cursor-pointer min-h-[44px] min-w-[44px] transition-colors"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
 
       {/* Profile Customization Modal */}

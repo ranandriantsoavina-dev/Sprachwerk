@@ -20,7 +20,6 @@ export function createUserRouter(db: D1Database) {
         displayName,
         interfaceLang,
         theme,
-        timezone,
         leaderboardVisible,
         reducedMotion,
         practicePrefs,
@@ -41,11 +40,6 @@ export function createUserRouter(db: D1Database) {
 
       const cleanTheme = theme === 'dark' || theme === 'light' ? theme : req.authUser!.theme;
 
-      const cleanTz =
-        typeof timezone === 'string' && timezone.trim().length > 0 && timezone.trim().length <= 64
-          ? timezone.trim()
-          : req.authUser!.timezone;
-
       const cleanLb =
         typeof leaderboardVisible === 'boolean' ? (leaderboardVisible ? 1 : 0) : req.authUser!.leaderboard_visible;
 
@@ -62,11 +56,11 @@ export function createUserRouter(db: D1Database) {
       await db
         .prepare(
           `UPDATE users
-           SET display_name = ?, interface_lang = ?, theme = ?, timezone = ?,
+           SET display_name = ?, interface_lang = ?, theme = ?, timezone = 'UTC',
                leaderboard_visible = ?, reduced_motion = ?, updated_at = ?
            WHERE id = ?`
         )
-        .bind(cleanDisplayName, cleanLang, cleanTheme, cleanTz, cleanLb, cleanRm, nowIso, userId)
+        .bind(cleanDisplayName, cleanLang, cleanTheme, cleanLb, cleanRm, nowIso, userId)
         .run();
 
       const userPayload = await buildUserPayload(db, userId);

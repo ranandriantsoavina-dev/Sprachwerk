@@ -172,7 +172,7 @@ export function createAuthRouter(db: D1Database) {
     }
 
     const lang = interfaceLang === 'fr' || interfaceLang === 'de' ? interfaceLang : 'en';
-    const tz = typeof timezone === 'string' && timezone.length <= 64 ? timezone : 'UTC';
+    const tz = 'UTC';
     const nowIso = new Date().toISOString();
     const userId = crypto.randomUUID();
     const cleanEmail = email.trim().toLowerCase();
@@ -248,7 +248,7 @@ export function createAuthRouter(db: D1Database) {
     const codeHash = hashSecret(normalizeCode(usageCode));
     const authCfg = await getSetting<AuthConfig>(db, 'auth_config', getDefaultAuthConfig());
     const lang = interfaceLang === 'fr' || interfaceLang === 'de' ? interfaceLang : 'en';
-    const tz = typeof timezone === 'string' && timezone.length <= 64 ? timezone : 'UTC';
+    const tz = 'UTC';
     const now = new Date();
     const nowIso = now.toISOString();
     const userId = crypto.randomUUID();

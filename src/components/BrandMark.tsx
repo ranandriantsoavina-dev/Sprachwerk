@@ -15,14 +15,25 @@ import {
   User,
 } from 'lucide-react';
 
-export const BrandMark: React.FC<{ size?: 'sm' | 'md' }> = ({ size = 'md' }) => {
-  const barW = size === 'sm' ? 'w-4' : 'w-5';
-  const barH = size === 'sm' ? 'h-[3px]' : 'h-[3.5px]';
+export const BrandMark: React.FC<{ size?: 'sm' | 'md'; className?: string; onDark?: boolean }> = ({
+  size = 'md',
+  className = '',
+  onDark = false,
+}) => {
+  const boxSize = size === 'sm' ? 'w-[17px] h-[17px]' : 'w-[20px] h-[20px]';
+  const barH = size === 'sm' ? 'h-[3px]' : 'h-[4px]';
+  const darkSurface = onDark
+    ? 'bg-white rounded-[3px]'
+    : 'dark:bg-white dark:rounded-[3px]';
+
   return (
-    <span className="inline-flex flex-col gap-[2.5px] shrink-0" aria-hidden="true">
-      <span className={`${barW} ${barH} rounded-xs bg-black dark:bg-white`} />
-      <span className={`${barW} ${barH} rounded-xs bg-[#DD0000]`} />
-      <span className={`${barW} ${barH} rounded-xs bg-[#FFCE00]`} />
+    <span
+      className={`inline-flex flex-col justify-center gap-[2px] p-[2px] ${boxSize} shrink-0 ${darkSurface} ${className}`}
+      aria-hidden="true"
+    >
+      <span className={`w-full ${barH} rounded-[1px] bg-black block shrink-0`} />
+      <span className={`w-full ${barH} rounded-[1px] bg-[#DD0000] block shrink-0`} />
+      <span className={`w-full ${barH} rounded-[1px] bg-[#FFCE00] block shrink-0`} />
     </span>
   );
 };

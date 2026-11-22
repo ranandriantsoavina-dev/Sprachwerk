@@ -60,18 +60,10 @@ export function getCurrentPeriodKeys(now = new Date()): { weekKey: string; month
   return { weekKey, monthKey };
 }
 
-export function getLocalDateString(timezone: string, now = new Date()): string {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone || 'UTC',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    return formatter.format(now);
-  } catch {
-    return now.toISOString().slice(0, 10);
-  }
+export const FIXED_STREAK_TIMEZONE = 'UTC';
+
+export function getLocalDateString(_timezone?: string, now = new Date()): string {
+  return now.toISOString().slice(0, 10);
 }
 
 function addDaysToDateStr(dateStr: string, deltaDays: number): string {

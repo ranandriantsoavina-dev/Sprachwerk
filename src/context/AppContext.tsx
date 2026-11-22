@@ -70,10 +70,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Apply light/dark theme, equipped theme accent, and reduced-motion classes to documentElement
+  // Sync theme/language when a user session starts
+  useEffect(() => {
+    if (user) {
+      setLangLocal(user.interfaceLang);
+      setThemeLocal(user.theme);
+    }
+  }, [user?.id]);
+
+  // Apply light/dark theme (AuthView when logged out is always light), equipped theme accent, and reduced-motion classes
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    if (user && theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
@@ -89,7 +97,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       root.removeAttribute('data-theme-accent');
     }
-  }, [theme, user?.reducedMotion, user?.equipped?.theme_accent?.value]);
+  }, [user, theme, user?.reducedMotion, user?.equipped?.theme_accent?.value]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -168,6 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // ignore network error on logout
     }
     setUser(null);
+    setThemeLocal('light');
     setScreen('home');
   }, []);
 

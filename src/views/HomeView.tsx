@@ -106,8 +106,6 @@ export const HomeView: React.FC = () => {
               }`}
             >
               <span>{t(lang, 'levelLabel')} {user.level.level}</span>
-              <span aria-hidden="true">·</span>
-              <span className="truncate">{user.timezone}</span>
               <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
             </div>
           </div>
@@ -119,8 +117,6 @@ export const HomeView: React.FC = () => {
               }`}
             >
               <span>{t(lang, 'levelLabel')} {user.level.level}</span>
-              <span aria-hidden="true">·</span>
-              <span>{user.timezone}</span>
               <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
             </div>
             <h2

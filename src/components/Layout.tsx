@@ -183,10 +183,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Top Header */}
         <header className="sticky top-0 z-20 h-14 bg-white/95 dark:bg-[#111318]/95 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 w-full">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <span className="lg:hidden shrink-0">
-              <BrandMark size="sm" />
-            </span>
-            <h1 className="text-sm sm:text-base font-display font-bold text-neutral-900 dark:text-white truncate">
+            <BrandMark size="sm" className="lg:hidden" />
+            <h1 className="text-sm sm:text-base font-display font-bold leading-tight text-neutral-900 dark:text-white truncate">
               {activeNavTitle}
             </h1>
           </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Check, Layers, Search, SlidersHorizontal } from 'lucide-react';
+import { BookOpen, ChevronRight, Layers, Search, SlidersHorizontal } from 'lucide-react';
 import { PracticeParametersPanel } from '../components/PracticeEngine';
 import { PracticeModeSwitch } from '../components/PracticeModeSwitch';
 import { useApp } from '../context/AppContext';
@@ -19,12 +19,14 @@ export const LessonPracticeView: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     selectedLessonIdForPractice ? [selectedLessonIdForPractice] : []
   );
-  const [configuring, setConfiguring] = useState(() => Boolean(selectedLessonIdForPractice));
+  const [subView, setSubView] = useState<'select' | 'configure' | 'defaults'>(() =>
+    selectedLessonIdForPractice ? 'configure' : 'select'
+  );
 
   useEffect(() => {
     if (selectedLessonIdForPractice) {
       setSelectedIds([selectedLessonIdForPractice]);
-      setConfiguring(true);
+      setSubView('configure');
       setSelectedLessonIdForPractice(null);
     }
   }, [selectedLessonIdForPractice, setSelectedLessonIdForPractice]);
@@ -48,12 +50,23 @@ export const LessonPracticeView: React.FC = () => {
     };
   }, []);
 
-  if (configuring) {
+  if (subView === 'configure') {
     return (
       <PracticeParametersPanel
         mode="lesson"
+        intent="start"
         selectedLessons={selectedIds}
-        onBack={() => setConfiguring(false)}
+        onBack={() => setSubView('select')}
+      />
+    );
+  }
+
+  if (subView === 'defaults') {
+    return (
+      <PracticeParametersPanel
+        mode="lesson"
+        intent="defaults"
+        onBack={() => setSubView('select')}
       />
     );
   }
@@ -67,8 +80,9 @@ export const LessonPracticeView: React.FC = () => {
     return true;
   });
 
-  const toggleLesson = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const openLessonConfig = (id: string) => {
+    setSelectedIds([id]);
+    setSubView('configure');
   };
 
   return (
@@ -88,12 +102,11 @@ export const LessonPracticeView: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setConfiguring(true)}
-          disabled={selectedIds.length === 0 && !comingSoon}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold disabled:opacity-40 cursor-pointer min-h-[44px] whitespace-nowrap shrink-0"
+          onClick={() => setSubView('defaults')}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#12141A] hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px] whitespace-nowrap shrink-0"
         >
           <SlidersHorizontal size={16} />
-          <span>{t(lang, 'launchSession')}</span>
+          <span>{t(lang, 'configureDefaultsBtn')}</span>
         </button>
       </div>
 
@@ -139,60 +152,53 @@ export const LessonPracticeView: React.FC = () => {
           <h3 className="text-xl font-display font-bold text-neutral-900 dark:text-white mb-2">
             {t(lang, 'comingSoonDatasetTitle')}
           </h3>
-          <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed mb-5">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
             {t(lang, 'comingSoonDatasetBody')}
           </p>
-          <button
-            type="button"
-            onClick={() => setConfiguring(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-sm font-medium text-neutral-900 dark:text-white hover:border-black dark:hover:border-white cursor-pointer min-h-[44px]"
-          >
-            <SlidersHorizontal size={15} />
-            <span>{t(lang, 'previewParametersBtn')}</span>
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((lesson) => {
-            const active = selectedIds.includes(lesson.id);
-            return (
-              <div
-                key={lesson.id}
-                className={`rounded-xl border p-4 flex items-center justify-between gap-3 ${
-                  active
-                    ? 'border-[#DD0000] bg-[#DD0000]/5'
-                    : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A]'
-                }`}
+          {filtered.map((lesson) => (
+            <div
+              key={lesson.id}
+              className="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 p-4 flex items-center justify-between gap-3 transition-colors"
+            >
+              <button
+                type="button"
+                onClick={() => openLessonConfig(lesson.id)}
+                className="flex-1 text-left cursor-pointer min-w-0"
               >
+                <div className="text-xs font-mono-tabular text-neutral-500">
+                  {lesson.level} · {t(lang, 'unitLabel')} {lesson.unit} · {lesson.topic}
+                </div>
+                <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5 break-words">
+                  {lesson.title_de}
+                </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => toggleLesson(lesson.id)}
-                  className="flex-1 text-left cursor-pointer min-w-0"
+                  onClick={() => {
+                    setSelectedLessonIdForDetail(lesson.id);
+                    setScreen('library');
+                  }}
+                  title={t(lang, 'viewLessonExplanation')}
+                  aria-label={t(lang, 'viewLessonExplanation')}
+                  className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
                 >
-                  <div className="text-xs font-mono-tabular text-neutral-500">
-                    {lesson.level} · {t(lang, 'unitLabel')} {lesson.unit} · {lesson.topic}
-                  </div>
-                  <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5 break-words">
-                    {lesson.title_de}
-                  </div>
+                  <BookOpen size={16} />
                 </button>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedLessonIdForDetail(lesson.id);
-                      setScreen('library');
-                    }}
-                    title={t(lang, 'viewLessonExplanation')}
-                    className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
-                  >
-                    <BookOpen size={16} />
-                  </button>
-                  {active && <Check size={16} className="text-[#DD0000]" />}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => openLessonConfig(lesson.id)}
+                  aria-label={t(lang, 'practiceThisLessonBtn')}
+                  className="p-1.5 rounded-lg text-neutral-400 group-hover:text-[#DD0000] dark:group-hover:text-[#FFCE00] cursor-pointer min-h-[40px] flex items-center justify-center transition-colors"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
