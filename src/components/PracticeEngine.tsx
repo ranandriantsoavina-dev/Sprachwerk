@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  Lightbulb,
   Play,
   RotateCcw,
   Save,
@@ -12,6 +13,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { QUESTIONS_CATALOG } from '../data/questionsCatalog';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
 import { enqueueOfflineEvent } from '../lib/offlineQueue';
@@ -147,6 +149,10 @@ export const PracticeParametersPanel: React.FC<{
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState('');
+  const [showHint, setShowHint] = useState(false);
+  const [usedFragmentIndices, setUsedFragmentIndices] = useState<number[]>([]);
+  const [selectedLeftIdx, setSelectedLeftIdx] = useState<number | null>(null);
+  const [matchedPairs, setMatchedPairs] = useState<Record<number, string>>({});
   const [checkedFeedback, setCheckedFeedback] = useState<PracticeResultRow | null>(null);
   const [results, setResults] = useState<PracticeResultRow[]>([]);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
@@ -251,6 +257,10 @@ export const PracticeParametersPanel: React.FC<{
       setQuestions(res.items);
       setCurrentIdx(0);
       setDraftAnswer('');
+      setShowHint(false);
+      setUsedFragmentIndices([]);
+      setSelectedLeftIdx(null);
+      setMatchedPairs({});
       setCheckedFeedback(null);
       setResults([]);
       setSessionElapsed(0);
@@ -258,6 +268,40 @@ export const PracticeParametersPanel: React.FC<{
       setRewardSummary(null);
       setStage('active');
     } catch (err) {
+      if (!isOnline) {
+        let pool = QUESTIONS_CATALOG;
+        if (mode === 'lesson' && selectedLessons.length > 0) {
+          pool = pool.filter((q) => q.lesson_ids.some((id) => selectedLessons.includes(id)));
+        } else if (selectedTopics.length > 0 && !selectedTopics.includes('mixed')) {
+          pool = pool.filter((q) => q.topic_tags.some((tg) => selectedTopics.includes(tg)));
+        }
+        if (mode !== 'lesson' && params.difficulty) {
+          pool = pool.filter((q) => q.difficulty === params.difficulty);
+        }
+        if (params.exerciseTypes.length > 0) {
+          pool = pool.filter((q) => params.exerciseTypes.includes(q.type));
+        }
+        if (pool.length > 0) {
+          const picked =
+            params.order === 'shuffled'
+              ? [...pool].sort(() => Math.random() - 0.5)
+              : [...pool];
+          setQuestions(picked.slice(0, Math.max(1, Math.min(200, params.questionCount))));
+          setCurrentIdx(0);
+          setDraftAnswer('');
+          setShowHint(false);
+          setUsedFragmentIndices([]);
+          setSelectedLeftIdx(null);
+          setMatchedPairs({});
+          setCheckedFeedback(null);
+          setResults([]);
+          setSessionElapsed(0);
+          setSecondsLeft(params.timerSeconds);
+          setRewardSummary(null);
+          setStage('active');
+          return;
+        }
+      }
       if (mode === 'lesson' && lessonHasContent === false) {
         setStage('coming_soon');
         return;
@@ -270,21 +314,49 @@ export const PracticeParametersPanel: React.FC<{
 
   const currentQuestion = questions[currentIdx];
 
+  const shuffledRightOptions = useMemo(() => {
+    if (!currentQuestion?.matching_pairs || currentQuestion.matching_pairs.length === 0) return [];
+    const items = currentQuestion.matching_pairs.map((p) => p.right);
+    // Deterministic rotation/shuffle seeded by question ID so rows aren't trivially aligned
+    let seed = 0;
+    for (let i = 0; i < currentQuestion.id.length; i++) {
+      seed = (seed * 31 + currentQuestion.id.charCodeAt(i)) >>> 0;
+    }
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const j = seed % (i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    if (arr.every((val, idx) => val === items[idx]) && arr.length > 1) {
+      [arr[0], arr[1]] = [arr[1], arr[0]];
+    }
+    return arr;
+  }, [currentQuestion]);
+
+  const normalizeAnswer = (raw: string, caseSensitive?: boolean) => {
+    const collapsed = raw.trim().replace(/\s+/g, ' ');
+    return caseSensitive ? collapsed : collapsed.toLowerCase();
+  };
+
   const handleSubmitAnswer = (timedOut = false, skipped = false) => {
     if (!currentQuestion) return;
-    const normalizedUser = draftAnswer.trim().toLowerCase();
-    const accepted = currentQuestion.accepted_answers.map((a) => a.trim().toLowerCase());
+    const normalizedUser = normalizeAnswer(draftAnswer, currentQuestion.case_sensitive);
+    const accepted = currentQuestion.accepted_answers.map((a) =>
+      normalizeAnswer(a, currentQuestion.case_sensitive)
+    );
     const isCorrect = !timedOut && !skipped && accepted.includes(normalizedUser);
     const explanation =
       currentQuestion.explanation_i18n[lang] ||
       currentQuestion.explanation_i18n.en ||
       currentQuestion.explanation_i18n.de ||
       '';
+    const displayPrompt = currentQuestion.prompt_i18n?.[lang] || currentQuestion.prompt_de;
 
     const row: PracticeResultRow = {
       questionId: currentQuestion.id,
       topic: currentQuestion.topic_tags[0] || 'General',
-      prompt: currentQuestion.prompt_de,
+      prompt: displayPrompt,
       userAnswer: timedOut ? '(timed out)' : skipped ? '(skipped)' : draftAnswer.trim(),
       correctAnswer: currentQuestion.solution,
       explanation,
@@ -306,6 +378,10 @@ export const PracticeParametersPanel: React.FC<{
   const advanceOrFinish = async (finalResults: PracticeResultRow[]) => {
     setCheckedFeedback(null);
     setDraftAnswer('');
+    setShowHint(false);
+    setUsedFragmentIndices([]);
+    setSelectedLeftIdx(null);
+    setMatchedPairs({});
     if (currentIdx + 1 < questions.length) {
       setCurrentIdx((i) => i + 1);
       setSecondsLeft(params.timerSeconds);
@@ -370,14 +446,20 @@ export const PracticeParametersPanel: React.FC<{
         )}
         <h2
           className={`text-2xl font-display font-bold text-neutral-900 dark:text-white ${
-            mode === 'lesson' ? 'mb-6' : 'mb-3'
+            mode === 'lesson' && !lessonHasContent ? 'mb-6' : 'mb-3'
           }`}
         >
-          {mode === 'lesson' ? 'Lesson content coming soon' : t(lang, 'comingSoonDatasetTitle')}
+          {mode === 'lesson'
+            ? lessonHasContent
+              ? t(lang, 'lessonPracticeQuestionsComingSoon')
+              : 'Lesson content coming soon'
+            : t(lang, 'comingSoonDatasetTitle')}
         </h2>
-        {mode !== 'lesson' && (
+        {(mode !== 'lesson' || lessonHasContent) && (
           <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300 mb-6">
-            {t(lang, 'comingSoonDatasetBody')}
+            {mode === 'lesson' && lessonHasContent
+              ? t(lang, 'lessonPracticeQuestionsComingSoonBody')
+              : t(lang, 'comingSoonDatasetBody')}
           </p>
         )}
 
@@ -425,26 +507,162 @@ export const PracticeParametersPanel: React.FC<{
   }
 
   if (stage === 'active' && currentQuestion) {
+    const displayPrompt = currentQuestion.prompt_i18n?.[lang] || currentQuestion.prompt_de;
+    const hintText =
+      currentQuestion.hint_i18n?.[lang] ||
+      currentQuestion.hint_i18n?.en ||
+      currentQuestion.hint_i18n?.de;
+
+    const handleFragmentClick = (frag: string, fragIdx: number) => {
+      if (checkedFeedback || usedFragmentIndices.includes(fragIdx)) return;
+      setUsedFragmentIndices((prev) => [...prev, fragIdx]);
+      setDraftAnswer((prev) => {
+        const trimmed = prev.trim();
+        return trimmed ? `${trimmed} ${frag}` : frag;
+      });
+    };
+
+    const handleResetFragments = () => {
+      if (checkedFeedback) return;
+      setUsedFragmentIndices([]);
+      setDraftAnswer('');
+    };
+
+    const handleMatchRightClick = (rightVal: string) => {
+      if (checkedFeedback || selectedLeftIdx === null || !currentQuestion.matching_pairs) return;
+      const nextPairs = { ...matchedPairs };
+      for (const [k, v] of Object.entries(nextPairs)) {
+        if (v === rightVal) {
+          delete nextPairs[Number(k)];
+        }
+      }
+      nextPairs[selectedLeftIdx] = rightVal;
+      setMatchedPairs(nextPairs);
+      setSelectedLeftIdx(null);
+
+      if (Object.keys(nextPairs).length === currentQuestion.matching_pairs.length) {
+        const formatted = currentQuestion.matching_pairs
+          .map((p, idx) => `${p.left} -> ${nextPairs[idx] ?? ''}`)
+          .join(' | ');
+        setDraftAnswer(formatted);
+      } else {
+        setDraftAnswer('');
+      }
+    };
+
     return (
       <div className="max-w-3xl space-y-6">
         <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
           <span className="font-mono-tabular">
             {currentIdx + 1} / {questions.length} · {currentQuestion.cefr_level} · {currentQuestion.type.replace('_', ' ')}
           </span>
-          {params.timerSeconds > 0 && (
-            <span className="inline-flex items-center gap-1.5 font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00]">
-              <Clock size={14} />
-              {secondsLeft}s
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {hintText && (
+              <button
+                type="button"
+                onClick={() => setShowHint((h) => !h)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-[#DD0000] dark:hover:text-[#FFCE00] cursor-pointer"
+              >
+                <Lightbulb size={14} />
+                <span>{showHint ? t(lang, 'hideHintBtn') : t(lang, 'hintBtn')}</span>
+              </button>
+            )}
+            {params.timerSeconds > 0 && (
+              <span className="inline-flex items-center gap-1.5 font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00]">
+                <Clock size={14} />
+                {secondsLeft}s
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8">
-          <p className="text-lg sm:text-xl font-medium text-neutral-900 dark:text-white leading-relaxed mb-6">
-            {currentQuestion.prompt_de}
+          <p className="text-lg sm:text-xl font-medium text-neutral-900 dark:text-white leading-relaxed mb-5">
+            {displayPrompt}
           </p>
 
-          {currentQuestion.options_de && currentQuestion.options_de.length > 0 ? (
+          {showHint && hintText && (
+            <div className="rounded-xl border border-[#FFCE00]/40 bg-[#FFCE00]/10 px-4 py-3 text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 mb-5">
+              {hintText}
+            </div>
+          )}
+
+          {currentQuestion.type === 'matching' && currentQuestion.matching_pairs && currentQuestion.matching_pairs.length > 0 ? (
+            <div className="space-y-3 mb-6">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                {t(lang, 'matchInstruction')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  {currentQuestion.matching_pairs.map((pair, idx) => {
+                    const isSelected = selectedLeftIdx === idx;
+                    const assignedRight = matchedPairs[idx];
+                    return (
+                      <button
+                        key={pair.left}
+                        type="button"
+                        disabled={Boolean(checkedFeedback)}
+                        onClick={() => setSelectedLeftIdx(isSelected ? null : idx)}
+                        className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer min-h-[44px] flex items-center justify-between gap-2 ${
+                          isSelected
+                            ? 'border-[#DD0000] bg-[#DD0000]/8 text-neutral-900 dark:text-white'
+                            : assignedRight
+                            ? 'border-neutral-900 dark:border-[#FFCE00]/70 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white'
+                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 hover:border-neutral-400'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono-tabular text-xs font-bold text-neutral-400 shrink-0">
+                            {idx + 1}.
+                          </span>
+                          <span className="break-words">{pair.left}</span>
+                        </span>
+                        {assignedRight && (
+                          <span className="text-[11px] font-mono-tabular text-[#DD0000] dark:text-[#FFCE00] shrink-0">
+                            → {shuffledRightOptions.indexOf(assignedRight) + 1}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-2">
+                  {shuffledRightOptions.map((rightVal, rIdx) => {
+                    const matchedLeftEntry = Object.entries(matchedPairs).find(([, v]) => v === rightVal);
+                    const matchedLeftNumber = matchedLeftEntry ? Number(matchedLeftEntry[0]) + 1 : null;
+                    return (
+                      <button
+                        key={rightVal}
+                        type="button"
+                        disabled={Boolean(checkedFeedback)}
+                        onClick={() => handleMatchRightClick(rightVal)}
+                        className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer min-h-[44px] flex items-center justify-between gap-2 ${
+                          matchedLeftNumber !== null
+                            ? 'border-neutral-900 dark:border-[#FFCE00]/70 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white'
+                            : selectedLeftIdx !== null
+                            ? 'border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:border-[#DD0000]'
+                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono-tabular text-xs font-bold text-neutral-400 shrink-0">
+                            {rIdx + 1}.
+                          </span>
+                          <span className="break-words">{rightVal}</span>
+                        </span>
+                        {matchedLeftNumber !== null && (
+                          <span className="text-[11px] font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] shrink-0">
+                            #{matchedLeftNumber}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : currentQuestion.options_de && currentQuestion.options_de.length > 0 ? (
             <div className="grid grid-cols-1 gap-2.5 mb-6">
               {currentQuestion.options_de.map((opt) => (
                 <button
@@ -463,14 +681,63 @@ export const PracticeParametersPanel: React.FC<{
               ))}
             </div>
           ) : (
-            <input
-              type="text"
-              value={draftAnswer}
-              disabled={Boolean(checkedFeedback)}
-              onChange={(e) => setDraftAnswer(e.target.value)}
-              placeholder={t(lang, 'answerPlaceholder')}
-              className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white text-sm mb-6 focus:outline-none focus:border-[#DD0000]"
-            />
+            <div className="space-y-3 mb-6">
+              {currentQuestion.type === 'sentence_construction' &&
+                currentQuestion.fragments_de &&
+                currentQuestion.fragments_de.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {t(lang, 'tapFragmentsHint')}
+                      </span>
+                      {usedFragmentIndices.length > 0 && !checkedFeedback && (
+                        <button
+                          type="button"
+                          onClick={handleResetFragments}
+                          className="text-xs font-medium text-[#DD0000] hover:underline cursor-pointer shrink-0"
+                        >
+                          {t(lang, 'resetOrderBtn')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {currentQuestion.fragments_de.map((frag, fragIdx) => {
+                        const used = usedFragmentIndices.includes(fragIdx);
+                        return (
+                          <button
+                            key={`${frag}-${fragIdx}`}
+                            type="button"
+                            disabled={Boolean(checkedFeedback) || used}
+                            onClick={() => handleFragmentClick(frag, fragIdx)}
+                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors min-h-[40px] ${
+                              used
+                                ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-neutral-400 dark:text-neutral-600 cursor-default'
+                                : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white hover:border-[#DD0000] cursor-pointer'
+                            }`}
+                          >
+                            {frag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+              <input
+                type="text"
+                value={draftAnswer}
+                disabled={Boolean(checkedFeedback)}
+                onChange={(e) => setDraftAnswer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !checkedFeedback && draftAnswer.trim()) {
+                    e.preventDefault();
+                    handleSubmitAnswer(false, false);
+                  }
+                }}
+                placeholder={t(lang, 'answerPlaceholder')}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-[#DD0000]"
+              />
+            </div>
           )}
 
           {checkedFeedback ? (
@@ -755,12 +1022,12 @@ export const PracticeParametersPanel: React.FC<{
             <input
               type="number"
               min={1}
-              max={50}
+              max={160}
               value={customCount}
               onChange={(e) => {
                 setCustomCount(e.target.value);
                 const n = Number(e.target.value);
-                if (n >= 1 && n <= 50) {
+                if (n >= 1 && n <= 160) {
                   setParams((p) => ({ ...p, questionCount: n }));
                 }
               }}

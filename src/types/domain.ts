@@ -157,6 +157,59 @@ export interface LeaderboardEntry {
   cosmetics: Record<string, string>;
 }
 
+export interface LessonRule {
+  id?: string;
+  title: string;
+  body: string;
+  title_i18n?: Partial<Record<InterfaceLang, string>>;
+  body_i18n?: Partial<Record<InterfaceLang, string>>;
+}
+
+export interface LessonTable {
+  id: string;
+  title_i18n: Record<InterfaceLang, string>;
+  caption_i18n?: Record<InterfaceLang, string>;
+  columns_i18n: Record<InterfaceLang, string[]>;
+  rows: string[][];
+}
+
+export interface LessonExample {
+  id?: string;
+  sentence: string;
+  highlight?: string;
+  note?: string;
+  explanation_i18n?: Record<InterfaceLang, string>;
+  translation_i18n?: Record<InterfaceLang, string>;
+}
+
+export interface LessonContrastItem {
+  id: string;
+  title_i18n: Record<InterfaceLang, string>;
+  contrast_pair?: string;
+  body_i18n: Record<InterfaceLang, string>;
+}
+
+export interface LessonMistake {
+  id?: string;
+  wrong: string;
+  right: string;
+  explanation_i18n: Record<string, string>;
+  principle_i18n?: Record<InterfaceLang, string>;
+}
+
+export interface LessonQuickReview {
+  central_rule: string;
+  key_pattern: string;
+  mistake_warning: string;
+  self_check: string;
+}
+
+export interface LessonPracticeSubskill {
+  id: string;
+  label_i18n: Record<InterfaceLang, string>;
+  formats: ExerciseType[];
+}
+
 export interface Lesson {
   id: string;
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
@@ -165,11 +218,20 @@ export interface Lesson {
   title_de: string;
   topic: string;
   hasContent?: boolean;
+  tags?: string[];
+  estimated_study_minutes?: number;
+  prerequisite_knowledge_i18n?: Record<InterfaceLang, string>;
   objectives: Record<string, string>;
+  learning_objectives_i18n?: Record<InterfaceLang, string[]>;
+  introduction_i18n?: Record<InterfaceLang, string>;
   explanation_i18n: Record<string, string>;
-  rules: Array<{ title: string; body: string }>;
-  examples_de: Array<{ sentence: string; highlight?: string; note?: string }>;
-  common_mistakes: Array<{ wrong: string; right: string; explanation_i18n: Record<string, string> }>;
+  rules: LessonRule[];
+  tables?: LessonTable[];
+  examples_de: LessonExample[];
+  usage_and_contrasts?: LessonContrastItem[];
+  common_mistakes: LessonMistake[];
+  quick_review_i18n?: Record<InterfaceLang, LessonQuickReview>;
+  practice_mapping?: LessonPracticeSubskill[];
   progress?: {
     bookmarked: number;
     first_completed_at: string | null;
@@ -177,18 +239,31 @@ export interface Lesson {
   };
 }
 
+export interface QuestionMatchingPair {
+  left: string;
+  right: string;
+}
+
 export interface Question {
   id: string;
+  mode?: 'lesson-practice' | 'general-practice';
   lesson_ids: string[];
   topic_tags: string[];
+  learning_objective_id?: string;
   cefr_level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   difficulty: DifficultyLevel;
   type: ExerciseType;
   prompt_de: string;
+  prompt_i18n?: Partial<Record<InterfaceLang, string>>;
   options_de?: string[];
+  fragments_de?: string[];
+  matching_pairs?: QuestionMatchingPair[];
   accepted_answers: string[];
   solution: string;
   explanation_i18n: Record<string, string>;
+  hint_i18n?: Partial<Record<InterfaceLang, string>>;
+  case_sensitive?: boolean;
+  source_language?: 'de';
 }
 
 export interface Flashcard {

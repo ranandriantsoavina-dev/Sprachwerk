@@ -1,0 +1,308 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_29: Lesson = {
+  id: 'a1-29',
+  level: 'A1',
+  unit: 29,
+  title_en: 'Basic adjective usage',
+  title_de: 'Adjektive',
+  topic: 'Basic adjective usage',
+  hasContent: true,
+  tags: ['adjektive', 'praedikativ', 'adverbial', 'gegensaetze'],
+  estimated_study_minutes: 12,
+  prerequisite_knowledge_i18n: {
+    en: 'Helpful to know sein (A1-03) and negation with nicht (A1-16). Attributive adjective endings before nouns belong to A2.',
+    fr: 'Utile de connaître sein (A1-03) et la négation nicht (A1-16). Les terminaisons d’adjectifs épithètes devant un nom sont étudiées en A2.',
+    de: 'Hilfreich sind sein (A1-03) und die Verneinung mit nicht (A1-16). Adjektivdeklination vor dem Nomen folgt in A2.',
+  },
+  objectives: {
+    en: 'Use adjectives correctly at A1 after verbs such as sein, werden, and finden (predicative) and to describe actions (adverbial) without adding endings, modify them with degree words (sehr, ziemlich, zu, ein bisschen), and pair everyday opposites.',
+    fr: 'Employer les adjectifs en position attributive après sein, werden, finden ou comme adverbes sans aucune terminaison, les nuancer avec sehr, ziemlich, zu, etwas et maîtriser les paires contraires courantes.',
+    de: 'Adjektive nach Verben wie sein, werden, finden (prädikativ) sowie zur Beschreibung von Handlungen (adverbial) endungslos verwenden, mit Gradwörtern (sehr, ziemlich, zu) kombinieren und wichtige Gegensätze kennen.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Use adjectives without any endings after sein, werden, bleiben, and finden (predicative use: "Der Film ist gut", "Die Zimmer sind groß").',
+      'Use the same uninflected base form adverbially to describe how an action is done ("Sie spricht langsam", "Er fährt schnell").',
+      'Gradate adjectives with sehr (very), wirklich (really), ziemlich (quite), etwas / ein bisschen (a bit), and zu (too).',
+      'Use high-frequency A1 adjective opposite pairs (groß/klein, alt/neu/jung, teuer/billig, schnell/langsam, leicht/schwer, heiß/kalt).',
+    ],
+    fr: [
+      'Utiliser l’adjectif invariable (sans terminaison) après sein, werden, bleiben et finden (« Der Film ist gut », « Die Zimmer sind groß »).',
+      'Employer la même forme invariable comme adverbe de manière (« Sie spricht langsam »).',
+      'Nuancer l’intensité avec sehr, wirklich, ziemlich, etwas / ein bisschen et zu.',
+      'Maîtriser les paires d’antonymes du niveau A1 (groß/klein, alt/neu/jung, teuer/billig, schnell/langsam, leicht/schwer, heiß/kalt).',
+    ],
+    de: [
+      'Adjektive nach sein, werden, bleiben und finden ohne Endung verwenden (prädikativ: „Der Film ist gut“, „Die Zimmer sind groß“).',
+      'Dieselbe endungslose Grundform adverbial nutzen („Sie spricht langsam“, „Er fährt schnell“).',
+      'Adjektive mit sehr, wirklich, ziemlich, etwas / ein bisschen und zu abstufen.',
+      'Wichtige A1-Gegensatzpaare anwenden (groß/klein, alt/neu/jung, teuer/billig, schnell/langsam, leicht/schwer, heiß/kalt).',
+    ],
+  },
+  introduction_i18n: {
+    en: 'Good news at A1: whenever a German adjective comes after the verb (such as "Der Kaffee ist heiß" or "Die Kinder sind müde") or describes how someone acts ("Du sprichst schnell"), it never changes its ending! Regardless of gender or plural, the adjective stays in its clean base form.',
+    fr: 'Bonne nouvelle au niveau A1 : tant que l’adjectif allemand se trouve après le verbe (« Der Kaffee ist heiß », « Die Kinder sind müde ») ou qualifie une action (« Du sprichst schnell »), il reste totalement invariable. Quel que soit le genre ou le pluriel, il ne prend aucune terminaison.',
+    de: 'Eine gute Nachricht für A1: Steht das Adjektiv hinter dem Verb („Der Kaffee ist heiß“, „Die Kinder sind müde“) oder beschreibt es eine Handlung („Du sprichst schnell“), bleibt es immer unverändert in seiner Grundform – ganz ohne Endung.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Predicative adjectives (after sein, werden, bleiben, finden)',
+      'When an adjective stands after verbs like sein (to be), werden (to become), bleiben (to stay), or finden (to find/think of), it NEVER takes an ending—even with feminine or plural nouns:',
+      '• der Mann ist müde | die Frau ist müde | das Kind ist müde | die Kinder sind müde.',
+      '• Ich finde die Wohnung sehr schön. (NOT *schöne)',
+      '(When an adjective stands directly BEFORE a noun—like "ein schönes Haus"—it does take endings; that pattern is covered systematically in A2.)',
+      '',
+      '2. Adverbial adjectives (describing how an action happens)',
+      'Unlike English (-ly) or French (-ment), German does not add a special ending to turn most adjectives into adverbs of manner:',
+      '• "Der Zug ist schnell." (adjective) → "Der Zug fährt schnell." (adverb — identical form!).',
+      '• "Seine Aussprache ist deutlich." → "Er spricht deutlich."',
+      '',
+      '3. Intensifiers & everyday opposites',
+      'Put degree words directly in front of the adjective: nicht (not), ein bisschen / etwas (a little), ziemlich (fairly/pretty), sehr (very), wirklich (really), zu (too): "Die Jacke ist mir zu teuer."',
+      'Important distinction for "old" opposites: alt ↔ neu (for objects/things: ein neues Auto), alt ↔ jung (for people/animals: ein junger Mensch / meine Oma ist alt).',
+    ].join('\n'),
+    fr: [
+      '1. Adjectifs en emploi prédicatif (après sein, werden, bleiben, finden)',
+      'Placé après sein, werden, bleiben ou finden, l’adjectif reste TOUJOURS invariable, quel que soit le genre ou le nombre du sujet :',
+      '• der Mann ist müde | die Frau ist müde | die Kinder sind müde.',
+      '• Ich finde die Wohnung sehr schön. (jamais *schöne)',
+      '(C’est seulement devant un nom, comme « ein schönes Haus », que l’adjectif prend des terminaisons — sujet du niveau A2.)',
+      '',
+      '2. Adjectifs employés comme adverbes',
+      'Contrairement à l’anglais (-ly) ou au français (-ment), l’allemand n’ajoute pas de suffixe pour transformer un adjectif en adverbe de manière :',
+      '• « Der Zug ist schnell. » → « Der Zug fährt schnell. » (même forme !)',
+      '',
+      '3. Modificateurs d’intensité et antonymes',
+      'Placez le degré juste devant l’adjectif : nicht (pas), ein bisschen / etwas (un peu), ziemlich (assez), sehr (très), zu (trop).',
+      'Distinction utile : alt ↔ neu pour les choses (« das Buch ist neu ») vs alt ↔ jung pour les personnes et animaux (« mein Bruder ist jung »).',
+    ].join('\n'),
+    de: [
+      '1. Prädikative Adjektive (nach sein, werden, bleiben, finden)',
+      'Steht ein Adjektiv nach sein, werden, bleiben oder finden, bekommt es NIE eine Endung – unabhängig von Genus oder Plural:',
+      '• der Mann ist müde | die Frau ist müde | das Kind ist müde | die Kinder sind müde.',
+      '• Ich finde die Wohnung sehr schön. (nicht *schöne!)',
+      '(Endungen braucht das Adjektiv erst direkt vor einem Nomen wie „eine schöne Wohnung“ – das lernt man in A2.)',
+      '',
+      '2. Adverbiale Adjektive (wie etwas passiert)',
+      'Auch wenn ein Adjektiv ein Verb näher beschreibt, bleibt es endungslos:',
+      '• „Der Zug ist schnell.“ → „Der Zug fährt schnell.“',
+      '• „Die Musik ist laut.“ → „Sie spielt laut Klavier.“',
+      '',
+      '3. Abstufung und wichtige Gegensätze',
+      'Gradwörter stehen direkt vor dem Adjektiv: nicht, ein bisschen / etwas, ziemlich, sehr, wirklich, zu („Der Mantel ist zu teuer“).',
+      'Beachte bei alt den Unterschied: bei Dingen alt ↔ neu („Mein Handy ist neu“), bei Personen alt ↔ jung („Meine Tochter ist jung“).',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-uninflected-pred-adv',
+      title: 'Nach Verben und bei Handlungen bleibt das Adjektiv ohne Endung',
+      body: 'Prädikativ (nach sein, werden, bleiben, finden) und adverbial (bei anderen Verben) steht immer die Grundform ohne -e/-s/-en.',
+      title_i18n: {
+        en: 'No endings in predicative or adverbial position',
+        fr: 'Aucune terminaison après le verbe (prédicatif ou adverbe)',
+        de: 'Nach Verben und bei Handlungen bleibt das Adjektiv ohne Endung',
+      },
+      body_i18n: {
+        en: 'Even with plural subjects ("Die Bücher sind interessant"), never add -e or -s to an adjective after sein or finden.',
+        fr: 'Même au pluriel (« Die Bücher sind interessant »), n’ajoutez jamais -e ni -s après sein ou finden.',
+        de: 'Auch im Plural („Die Bücher sind interessant“) hängt man nach sein oder finden kein -e oder -s an.',
+      },
+    },
+    {
+      id: 'rule-teuer-e-drop-note',
+      title: 'zu / sehr / ziemlich + Adjektiv; Achtung bei neu vs. jung',
+      body: 'Gradwörter stehen direkt vor dem Adjektiv; neu gilt für Sachen, jung für Lebewesen.',
+      title_i18n: {
+        en: 'Degree words precede the adjective; neu (things) vs. jung (people)',
+        fr: 'Les adverbes de degré précèdent l’adjectif ; neu (choses) vs jung (personnes)',
+        de: 'Gradwörter vor dem Adjektiv; neu (Sachen) vs. jung (Personen)',
+      },
+      body_i18n: {
+        en: 'Use "Ich finde den Test ziemlich leicht" or "Der Kaffee ist zu heiß"; remember neu for objects and jung for people.',
+        fr: 'Dites « Der Kaffee ist zu heiß » ; employez neu pour un objet et jung pour une personne.',
+        de: 'Gradwörter wie ziemlich oder zu stehen direkt vor dem Adjektiv; für Personen nimmt man jung statt neu.',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'tbl-adjectives-opposites',
+      title_i18n: {
+        en: 'High-frequency A1 adjective pairs',
+        fr: 'Paires d’adjectifs contraires essentielles (A1)',
+        de: 'Wichtige A1-Adjektive und Gegensätze',
+      },
+      columns_i18n: {
+        en: ['Adjective', 'Opposite', 'Example (predicative / adverbial)'],
+        fr: ['Adjectif', 'Contraire', 'Exemple'],
+        de: ['Adjektiv', 'Gegenteil', 'Beispielsatz'],
+      },
+      rows: [
+        ['groß', 'klein', 'Unsere Küche ist klein, aber das Wohnzimmer ist groß.'],
+        ['alt', 'neu (things) / jung (people)', 'Mein Handy ist alt, aber mein Computer ist neu.'],
+        ['teuer', 'billig / günstig', 'Im Zentrum sind die Mieten leider sehr teuer.'],
+        ['gut', 'schlecht', 'Heute ist das Wetter wirklich gut.'],
+        ['schnell', 'langsam', 'Sprechen Sie bitte langsam!'],
+        ['leicht', 'schwer', 'Die erste Aufgabe ist leicht, die zweite ist schwer.'],
+        ['heiß / warm', 'kalt / kühl', 'Die Suppe ist noch zu heiß.'],
+        ['voll', 'leer', 'Morgens ist die U-Bahn oft voll.'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Die neuen Wohnungen im Zentrum sind hell, aber ziemlich teuer.',
+      highlight: 'hell / ziemlich teuer',
+      note: 'Uninflected predicative adjectives with plural subject',
+      translation_i18n: {
+        en: 'The new apartments in the center are bright, but quite expensive.',
+        fr: 'Les nouveaux appartements dans le centre sont lumineux, mais assez chers.',
+        de: 'Die neuen Wohnungen im Zentrum sind hell, aber ziemlich teuer.',
+      },
+      explanation_i18n: {
+        en: 'Because hell and teuer come after sind, neither takes a plural -e ending.',
+        fr: 'Placés après sind, hell et teuer restent invariables même avec un sujet pluriel.',
+        de: 'Nach sind bleiben hell und teuer auch im Plural endungslos.',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Unser Lehrer erklärt die Grammatik sehr ruhig und deutlich.',
+      highlight: 'sehr ruhig und deutlich',
+      note: 'Adverbial adjectives modifying the verb erklärt',
+      translation_i18n: {
+        en: 'Our teacher explains the grammar very calmly and clearly.',
+        fr: 'Notre professeur explique la grammaire très calmement et clairement.',
+        de: 'Unser Lehrer erklärt die Grammatik sehr ruhig und deutlich.',
+      },
+      explanation_i18n: {
+        en: 'German uses the base forms ruhig and deutlich directly as adverbs ("calmly and clearly").',
+        fr: 'L’allemand utilise directement les formes de base ruhig et deutlich comme adverbes de manière.',
+        de: 'Im Deutschen nutzt man ruhig und deutlich ohne Zusatz direkt als Adverbien.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Ich finde die Übung nicht schwer, sondern ganz leicht.',
+      highlight: 'nicht schwer ... ganz leicht',
+      note: 'finden + object + uninflected adjective',
+      translation_i18n: {
+        en: 'I don’t find the exercise difficult, but rather very easy.',
+        fr: 'Je ne trouve pas l’exercice difficile, mais très facile.',
+        de: 'Ich finde die Übung nicht schwer, sondern ganz leicht.',
+      },
+      explanation_i18n: {
+        en: 'After finden ("to think/find"), adjectives stay in their uninflected base form (schwer, leicht).',
+        fr: 'Après finden (« trouver »), l’adjectif reste également sans terminaison.',
+        de: 'Auch nach finden steht das Adjektiv in der Grundform ohne Endung.',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Der Tee ist noch zu heiß; ich warte zwei Minuten.',
+      highlight: 'zu heiß',
+      note: 'Intensity modifier zu ("too") before adjective',
+      translation_i18n: {
+        en: 'The tea is still too hot; I’ll wait two minutes.',
+        fr: 'Le thé est encore trop chaud ; j’attends deux minutes.',
+        de: 'Der Tee ist noch zu heiß; ich warte zwei Minuten.',
+      },
+      explanation_i18n: {
+        en: 'zu before an adjective means "too (excessively)" and keeps heiß uninflected.',
+        fr: 'zu devant un adjectif signifie « trop » et laisse l’adjectif invariable.',
+        de: 'zu vor dem Adjektiv drückt ein Übermaß aus.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-predicative-vs-attributive',
+      contrast_pair: 'Das Auto ist schnell.  (uninflected)  vs.  ein schnelles Auto  (A2 declension)',
+      title_i18n: {
+        en: 'After the verb (A1) vs. directly before a noun (A2)',
+        fr: 'Après le verbe (A1) vs devant le nom (A2)',
+        de: 'Hinter dem Verb (A1) vs. vor dem Nomen (A2)',
+      },
+      body_i18n: {
+        en: 'At A1, remember the clean separation: after sein/werden/finden or modifying a verb, adjectives NEVER take endings ("Die Schuhe sind billig"). Only when placed directly between an article and a noun do adjectives add endings ("billige Schuhe" — learned in detail in A2).',
+        fr: 'Retenez la règle simple pour A1 : après le verbe, l’adjectif ne prend jamais de terminaison (« Die Schuhe sind billig »). C’est uniquement devant un nom qu’il s’accorde (étudié en A2).',
+        de: 'Für A1 gilt: Nach dem Verb oder beim Verb steht immer die Grundform („Die Schuhe sind billig“). Nur vor dem Nomen bekommt das Adjektiv eine Endung (A2).',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Die Kinder sind müden und hungrige.',
+      right: 'Die Kinder sind müde und hungrig.',
+      explanation_i18n: {
+        en: 'Adjectives after sein never agree with plural nouns; always keep their base form without endings.',
+        fr: 'Après sein, l’adjectif ne s’accorde pas avec le pluriel : gardez la forme de base sans terminaison.',
+        de: 'Nach sein werden Adjektive im Deutschen nicht gebeugt – auch im Plural bleibt die Grundform.',
+      },
+      principle_i18n: {
+        en: 'Never add plural or gender endings to predicative adjectives after sein, werden, or finden.',
+        fr: 'N’ajoutez jamais de terminaison de genre ou de pluriel après sein, werden ou finden.',
+        de: 'Prädikative Adjektive nach sein, werden oder finden bleiben immer endungslos.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Mein kleiner Bruder ist noch sehr neu.',
+      right: 'Mein kleiner Bruder ist noch sehr jung.',
+      explanation_i18n: {
+        en: 'neu is used for things (a new phone, a new flat); for people and ages, use jung.',
+        fr: 'neu s’emploie pour les objets ; pour une personne, on emploie jung.',
+        de: 'neu verwendet man für Sachen; für Menschen und Alter steht jung.',
+      },
+      principle_i18n: {
+        en: 'Use jung (not neu) for young people and alt vs. neu for objects.',
+        fr: 'Utilisez jung pour les personnes et neu pour les choses.',
+        de: 'Personen sind jung oder alt; Dinge sind neu oder alt.',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'In predicative use (after sein, werden, finden) and adverbial use, German adjectives stay in their uninflected base form.',
+      key_pattern: 'Der Satz / Die Sätze sind leicht.  |  Sie spricht langsam.  |  sehr / ziemlich / zu + Adjektiv',
+      mistake_warning: 'Never add French/English-style plural -e/-s endings after sein (*sind müde, NOT *sind müden).',
+      self_check: 'Translate without endings: "The apples are cheap, and she speaks very clearly."',
+    },
+    fr: {
+      central_rule: 'En emploi prédicatif (après sein, werden, finden) et adverbial, l’adjectif allemand reste toujours invariable.',
+      key_pattern: 'Der Satz / Die Sätze sind leicht.  |  Sie spricht langsam.  |  sehr / ziemlich / zu + Adjectif',
+      mistake_warning: 'N’ajoutez jamais de marque de pluriel après sein (*sind müden est faux ; dites sind müde).',
+      self_check: 'Traduisez : « Les pommes sont bon marché et elle parle très clairement. »',
+    },
+    de: {
+      central_rule: 'Prädikative (nach sein, werden, finden) und adverbiale Adjektive stehen im Deutschen immer endungslos in der Grundform.',
+      key_pattern: 'Der Satz / Die Sätze sind leicht.  |  Sie spricht langsam.  |  sehr / ziemlich / zu + Adjektiv',
+      mistake_warning: 'Auch im Plural keine Endung nach sein anhängen (*sind müden ist falsch; richtig: sind müde).',
+      self_check: 'Ergänze mit Gegensätzen: „Die Aufgabe ist nicht schwer, sondern ___. Der Bus ist nicht langsam, sondern ___.“',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-29-predicative-adverbial',
+      label_i18n: {
+        en: 'Using uninflected adjectives in predicative and adverbial positions',
+        fr: 'Emploi de l’adjectif invariable (prédicatif et adverbe)',
+        de: 'Adjektive prädikativ und adverbial endungslos verwenden',
+      },
+      formats: ['gap_fill', 'error_correction', 'multiple_choice'],
+    },
+    {
+      id: 'a1-29-opposites-intensifiers',
+      label_i18n: {
+        en: 'Pairing A1 adjective opposites and intensifiers (sehr, ziemlich, zu)',
+        fr: 'Maîtrise des antonymes A1 et des adverbes de degré (sehr, ziemlich, zu)',
+        de: 'Gegensatzpaare und Gradwörter (sehr, ziemlich, zu) richtig einsetzen',
+      },
+      formats: ['matching', 'gap_fill', 'multiple_choice'],
+    },
+  ],
+};

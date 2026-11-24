@@ -1,0 +1,520 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_03: Lesson = {
+  id: 'a1-03',
+  level: 'A1',
+  unit: 3,
+  title_en: 'The verb sein',
+  title_de: 'Das Verb sein',
+  topic: 'The verb sein',
+  hasContent: true,
+  tags: [
+    'sein',
+    'praesens',
+    'unregelmaessige-verben',
+    'identitaet',
+    'alter',
+    'herkunft',
+  ],
+  estimated_study_minutes: 12,
+  prerequisite_knowledge_i18n: {
+    en: 'Helpful to recognize nominative personal pronouns (Lesson A1-02), though all forms are shown directly in the conjugation table below.',
+    fr: 'Il est utile de connaître les pronoms personnels sujets (leçon A1-02), mais toutes les formes sont rappelées dans le tableau de conjugaison ci-dessous.',
+    de: 'Hilfreich sind die Personalpronomen im Nominativ (Lektion A1-02); alle Formen stehen aber auch direkt in der Tabelle unten.',
+  },
+  objectives: {
+    en: 'Conjugate the irregular verb sein accurately across all present-tense persons and use it to state identity, origin, age, location, time, and states.',
+    fr: 'Conjuguer correctement le verbe irrégulier sein au présent à toutes les personnes et l’utiliser pour exprimer l’identité, l’origine, l’âge, le lieu, l’heure et un état.',
+    de: 'Das unregelmäßige Verb sein im Präsens in allen Personen sicher konjugieren und für Identität, Herkunft, Alter, Ort, Zeit sowie Zustände verwenden.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Recall and produce all present-tense forms of sein (ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind).',
+      'Use sein naturally for names, professions (without an article), origin, age, locations, descriptions, and time/weather.',
+      'Place the conjugated form of sein correctly in Position 2 in statements and Position 1 in yes/no questions.',
+      'Distinguish ihr seid (verb) from seit (preposition/conjunction) and avoid using haben for age.',
+    ],
+    fr: [
+      'Mémoriser et produire toutes les formes de sein au présent (ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind).',
+      'Employer sein pour présenter l’identité, la profession (sans article), l’origine, l’âge, le lieu, la description et l’heure ou la météo.',
+      'Placer la forme conjuguée de sein en position 2 dans une phrase déclarative et en position 1 dans une question fermée.',
+      'Distinguer ihr seid (verbe) de seit (préposition/conjonction) et ne pas utiliser haben pour indiquer l’âge.',
+    ],
+    de: [
+      'Alle Präsensformen von sein (ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind) sicher bilden.',
+      'sein für Namen, Berufe (ohne Artikel), Herkunft, Alter, Ort, Eigenschaften sowie Uhrzeit/Wetter anwenden.',
+      'Die konjugierte Form von sein im Aussagesatz auf Position 2 und in der Ja-/Nein-Frage auf Position 1 setzen.',
+      'ihr seid (Verb) von seit (Präposition/Konjunktion) unterscheiden und Alter mit sein statt haben ausdrücken.',
+    ],
+  },
+  introduction_i18n: {
+    en: 'The verb sein ("to be") is the single most common verb in German and the foundation of basic introductions and descriptions. Because sein is completely irregular in the present tense, its six forms must be learned directly—and once you know them, you can introduce yourself, state your profession, give your age, and describe people, places, and times.',
+    fr: 'Le verbe sein (« être ») est le verbe le plus fréquent en allemand et la base des présentations et descriptions simples. Comme sein est entièrement irrégulier au présent, ses formes doivent être apprises telles quelles ; elles vous permettent aussitôt d’indiquer votre nom, votre profession, votre âge, votre origine et de décrire des situations du quotidien.',
+    de: 'Das Verb sein ist das häufigste Verb der deutschen Sprache und die Grundlage für Vorstellungen und Beschreibungen. Da sein im Präsens völlig unregelmäßig ist, lernst du seine Formen direkt als festes Muster – damit kannst du sofort über Namen, Berufe, Herkunft, Alter, Orte und Eigenschaften sprechen.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Why sein is irregular in the present tense',
+      'Regular German verbs keep a fixed stem and add predictable endings (-e, -st, -t, -en, -t, -en). By contrast, sein changes its stem completely across persons: bin, bist, ist, sind, seid, sind. Notice that wir and sie/Sie share the exact same form: sind.',
+      '',
+      '2. Core everyday uses of sein at A1',
+      '• Identity & profession: "Ich bin Lukas." / "Sie ist Lehrerin." Notice that German normally drops the indefinite article (ein/eine) before professions, nationalities, and roles when no adjective is added.',
+      '• Origin & location: "Wir sind aus Spanien." / "Das Café ist hier."',
+      '• Descriptions & states: "Der Tee ist heiß." / "Ich bin müde."',
+      '• Age: "Mein Bruder ist 18 Jahre alt." Unlike French, Spanish, or Italian, German ALWAYS uses sein (not haben!) for age.',
+      '• Time, dates & weather with es: "Es ist zehn Uhr." / "Heute ist Montag." / "Es ist kalt."',
+      '',
+      '3. Word order with sein',
+      'In a standard statement, the conjugated form of sein stands in Position 2, even if another element such as a time word starts the sentence ("Heute bin ich zu Hause."). In a yes/no question, sein moves to Position 1 ("Bist du heute frei?").',
+    ].join('\n'),
+    fr: [
+      '1. Pourquoi sein est-il irrégulier au présent ?',
+      'Les verbes réguliers conservent un radical fixe auquel s’ajoutent les terminaisons habituelles (-e, -st, -t, -en, -t, -en). À l’inverse, sein change complètement de radical selon la personne : bin, bist, ist, sind, seid, sind. Notez que wir et sie/Sie ont exactement la même forme : sind.',
+      '',
+      '2. Principaux emplois de sein au niveau A1',
+      '• Identité et profession : « Ich bin Lukas. » / « Sie ist Lehrerin. » Comme en français, l’allemand omet généralement l’article indéfini devant une profession ou une nationalité seule (sans adjectif).',
+      '• Origine et localisation : « Wir sind aus Spanien. » / « Das Café ist hier. »',
+      '• États et descriptions : « Der Tee ist heiß. » / « Ich bin müde. »',
+      '• Âge : « Mein Bruder ist 18 Jahre alt. » Attention : contrairement au français (« j’ai 18 ans »), l’allemand emploie TOUJOURS sein (et jamais haben) pour l’âge.',
+      '• Heure, date et météo avec es : « Es ist zehn Uhr. » / « Heute ist Montag. » / « Es ist kalt. »',
+      '',
+      '3. Place du verbe sein dans la phrase',
+      'Dans une phrase déclarative simple, la forme conjuguée de sein occupe toujours la position 2, même si la phrase commence par un complément de temps (« Heute bin ich zu Hause. »). Dans une question fermée (oui/non), sein passe en position 1 (« Bist du heute frei ? »).',
+    ].join('\n'),
+    de: [
+      '1. Warum ist sein im Präsens unregelmäßig?',
+      'Regelmäßige Verben behalten einen festen Wortstamm und bekommen feste Endungen (-e, -st, -t, -en, -t, -en). Das Verb sein wechselt im Präsens dagegen den Stamm: bin, bist, ist, sind, seid, sind. Beachte, dass wir und sie/Sie dieselbe Form haben: sind.',
+      '',
+      '2. Zentrale Verwendungen von sein auf Niveau A1',
+      '• Identität und Beruf: „Ich bin Lukas.“ / „Sie ist Lehrerin.“ Vor Berufen und Nationalitäten ohne Adjektiv steht im Deutschen normalerweise kein unbestimmter Artikel.',
+      '• Herkunft und Ort: „Wir sind aus Spanien.“ / „Das Café ist hier.“',
+      '• Eigenschaften und Zustände: „Der Tee ist heiß.“ / „Ich bin müde.“',
+      '• Alter: „Mein Bruder ist 18 Jahre alt.“ Das Alter drückt man im Deutschen immer mit sein aus, nicht mit haben.',
+      '• Uhrzeit, Wochentag und Wetter mit es: „Es ist zehn Uhr.“ / „Heute ist Montag.“ / „Es ist kalt.“',
+      '',
+      '3. Wortstellung mit sein',
+      'Im Aussagesatz steht die konjugierte Form von sein immer an Position 2 – auch dann, wenn eine Zeitangabe am Satzanfang steht („Heute bin ich zu Hause.“). In der Ja-/Nein-Frage steht sein an Position 1 („Bist du heute frei?“).',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-sein-conjugation',
+      title: 'Präsensformen von sein',
+      body: 'ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind.',
+      title_i18n: {
+        en: 'Present-tense forms of sein must be memorized as a set',
+        fr: 'Les formes de sein au présent sont entièrement irrégulières',
+        de: 'Präsensformen von sein als festes Muster lernen',
+      },
+      body_i18n: {
+        en: 'Memorize: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind. Notice that wir, sie (plural), and Sie all share the form sind.',
+        fr: 'Retenez : ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind. Les personnes wir, sie (pluriel) et Sie partagent la forme sind.',
+        de: 'Merke dir: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind. Die Formen für wir, sie und Sie lauten alle sind.',
+      },
+    },
+    {
+      id: 'rule-sein-professions',
+      title: 'Berufe und Nationalitäten ohne Artikel nach sein',
+      body: 'Nach sein stehen Berufe und Nationalitäten ohne ein/eine (Sie ist Ärztin. Er ist Deutscher/Franzose.).',
+      title_i18n: {
+        en: 'Omit ein/eine before professions and nationalities after sein',
+        fr: 'Pas d’article indéfini devant un métier ou une nationalité après sein',
+        de: 'Berufe und Nationalitäten nach sein ohne Artikel',
+      },
+      body_i18n: {
+        en: 'Say "Ich bin Student" or "Sie ist Ärztin" without ein/eine. Only add an indefinite article when an adjective describes the noun: "Sie ist eine gute Ärztin."',
+        fr: 'Dites « Ich bin Student » ou « Sie ist Ärztin » sans ein/eine. On n’ajoute un article que si un adjectif qualifie le nom : « Sie ist eine gute Ärztin. »',
+        de: 'Man sagt „Ich bin Student“ oder „Sie ist Ärztin“ ohne ein/eine. Ein Artikel steht nur, wenn ein Adjektiv dazukommt: „Sie ist eine gute Ärztin.“',
+      },
+    },
+    {
+      id: 'rule-sein-word-order',
+      title: 'Wortstellung: Position 2 im Aussagesatz, Position 1 in Ja-/Nein-Fragen',
+      body: 'Aussagesatz: Ich bin hier. / Heute bin ich hier. Ja-/Nein-Frage: Bist du hier?',
+      title_i18n: {
+        en: 'Verb position: Position 2 in statements, Position 1 in yes/no questions',
+        fr: 'Position du verbe : position 2 dans l’affirmation, position 1 dans la question fermée',
+        de: 'Verbposition: Position 2 im Aussagesatz, Position 1 in der Ja-/Nein-Frage',
+      },
+      body_i18n: {
+        en: 'Keep the conjugated form of sein in the second slot of statements ("Heute bin ich müde.") and move it to the first slot for yes/no questions ("Sind Sie Herr Klein?").',
+        fr: 'Gardez sein conjugué en 2e position dans l’énoncé (« Heute bin ich müde. ») et placez-le en 1re position pour poser une question oui/non (« Sind Sie Herr Klein ? »).',
+        de: 'Die konjugierte Form von sein steht im Aussagesatz immer an zweiter Stelle („Heute bin ich müde.“) und in der Ja-/Nein-Frage an erster Stelle („Sind Sie Herr Klein?“).',
+      },
+    },
+    {
+      id: 'rule-sein-age',
+      title: 'Alter mit sein + Jahre alt',
+      body: 'Das Alter wird immer mit sein gebildet: Wie alt bist du? – Ich bin 25 Jahre alt.',
+      title_i18n: {
+        en: 'Age always uses sein (never haben)',
+        fr: 'L’âge s’exprime toujours avec sein (jamais avec haben)',
+        de: 'Alter immer mit sein (nie mit haben)',
+      },
+      body_i18n: {
+        en: 'Use sein + number + (Jahre alt): "Ich bin 25 (Jahre alt)." Never translate literally from French or Spanish using haben.',
+        fr: 'Utilisez sein + nombre + (Jahre alt) : « Ich bin 25 (Jahre alt). » N’utilisez jamais haben pour l’âge.',
+        de: 'Verwende sein + Zahl + (Jahre alt): „Ich bin 25 (Jahre alt).“ Man benutzt niemals haben für das Alter.',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'table-sein-praesens',
+      title_i18n: {
+        en: 'Present Tense (Präsens) of sein',
+        fr: 'Conjugaison de sein au présent (Präsens)',
+        de: 'Konjugation von sein im Präsens',
+      },
+      caption_i18n: {
+        en: 'Irregular verb sein ("to be") across all persons.',
+        fr: 'Verbe irrégulier sein (« être ») à toutes les personnes.',
+        de: 'Unregelmäßiges Verb sein in allen Personen.',
+      },
+      columns_i18n: {
+        en: ['Pronoun', 'Form of sein', 'Example Sentence', 'English Translation'],
+        fr: ['Pronom', 'Forme de sein', 'Phrase exemple', 'Traduction française'],
+        de: ['Pronomen', 'Form von sein', 'Beispielsatz', 'Bedeutung / Funktion'],
+      },
+      rows: [
+        ['ich', 'bin', 'Ich bin aus Österreich.', 'I am from Austria.'],
+        ['du', 'bist', 'Du bist sehr freundlich.', 'You are very friendly.'],
+        ['er / sie / es', 'ist', 'Das Museum ist heute offen.', 'The museum is open today.'],
+        ['wir', 'sind', 'Wir sind in Berlin.', 'We are in Berlin.'],
+        ['ihr', 'seid', 'Ihr seid pünktlich.', 'You (all) are on time.'],
+        ['sie (pl.)', 'sind', 'Die Kinder sind im Garten.', 'The children are in the garden.'],
+        ['Sie (formal)', 'sind', 'Sind Sie Frau Schneider?', 'Are you Ms. Schneider?'],
+      ],
+    },
+    {
+      id: 'table-sein-functions',
+      title_i18n: {
+        en: 'Common A1 Sentence Patterns with sein',
+        fr: 'Structures courantes avec sein au niveau A1',
+        de: 'Typische A1-Satzmuster mit sein',
+      },
+      columns_i18n: {
+        en: ['Context', 'Pattern', 'German Example'],
+        fr: ['Contexte', 'Structure', 'Exemple allemand'],
+        de: ['Kontext', 'Muster', 'Deutsches Beispiel'],
+      },
+      rows: [
+        ['Name / Identity', 'Subjekt + sein + Name', 'Ich bin Jonas. Das ist meine Kollegin.'],
+        ['Profession', 'Subjekt + sein + Beruf (no article)', 'Mein Vater ist Ingenieur. Sie ist Ärztin.'],
+        ['Origin', 'Subjekt + sein + aus + Land/Stadt', 'Wir sind aus der Schweiz. Bist du aus Lyon?'],
+        ['Age', 'Subjekt + sein + Zahl + Jahre alt', 'Meine Oma ist 74 Jahre alt.'],
+        ['State / Quality', 'Subjekt + sein + Adjektiv', 'Der Kaffee ist heiß, und ich bin müde.'],
+        ['Time / Weather', 'Es + ist + Uhrzeit / Adjektiv', 'Es ist neun Uhr. Heute ist es sonnig.'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Ich bin Jonas und ich bin 24 Jahre alt.',
+      highlight: 'bin',
+      note: 'Identity and age with ich bin',
+      translation_i18n: {
+        en: 'I am Jonas and I am 24 years old.',
+        fr: 'Je m’appelle Jonas (je suis Jonas) et j’ai 24 ans.',
+        de: 'Ich bin Jonas und ich bin 24 Jahre alt.',
+      },
+      explanation_i18n: {
+        en: 'Uses ich bin for both introducing your name and giving your age.',
+        fr: 'Emploie ich bin pour dire son prénom et son âge (jamais haben).',
+        de: 'Verwendet ich bin für den Namen und das Alter.',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Bist du aus München oder aus Stuttgart?',
+      highlight: 'Bist',
+      note: 'Yes/no question with du bist in Position 1',
+      translation_i18n: {
+        en: 'Are you from Munich or from Stuttgart?',
+        fr: 'Es-tu originaire de Munich ou de Stuttgart ?',
+        de: 'Bist du aus München oder aus Stuttgart?',
+      },
+      explanation_i18n: {
+        en: 'Places Bist in Position 1 to form a direct yes/no question with du.',
+        fr: 'Place Bist en position 1 pour former une question fermée avec du.',
+        de: 'Stellt Bist für eine Ja-/Nein-Frage an Position 1.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Meine Schwester ist Ärztin in einem Krankenhaus.',
+      highlight: 'ist',
+      note: '3rd person singular + profession without article',
+      translation_i18n: {
+        en: 'My sister is a doctor in a hospital.',
+        fr: 'Ma sœur est médecin dans un hôpital.',
+        de: 'Meine Schwester ist Ärztin in einem Krankenhaus.',
+      },
+      explanation_i18n: {
+        en: 'Uses ist for 3rd person singular (Meine Schwester = sie) and omits eine before the profession Ärztin.',
+        fr: 'Emploie ist pour la 3e personne du singulier et omet l’article indéfini devant le métier Ärztin.',
+        de: 'Verwendet ist für die 3. Person Singular und lässt den Artikel vor dem Beruf Ärztin weg.',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Es ist halb acht, aber die Kinder sind noch müde.',
+      highlight: 'ist / sind',
+      note: 'Time expression with es ist + plural subject die Kinder sind',
+      translation_i18n: {
+        en: 'It is seven thirty, but the children are still tired.',
+        fr: 'Il est sept heures et demie, mais les enfants sont encore fatigués.',
+        de: 'Es ist halb acht, aber die Kinder sind noch müde.',
+      },
+      explanation_i18n: {
+        en: 'Contrasts singular es ist for telling time with plural sind for die Kinder.',
+        fr: 'Oppose es ist pour l’heure et sind pour le sujet pluriel die Kinder.',
+        de: 'Kombiniert es ist für die Uhrzeit mit sind für das Plural-Subjekt die Kinder.',
+      },
+    },
+    {
+      id: 'ex-5',
+      sentence: 'Wir sind heute nicht im Büro, wir sind im Homeoffice.',
+      highlight: 'sind',
+      note: '1st person plural with negation and location',
+      translation_i18n: {
+        en: 'We are not in the office today; we are working from home.',
+        fr: 'Nous ne sommes pas au bureau aujourd’hui, nous sommes en télétravail.',
+        de: 'Wir sind heute nicht im Büro, wir sind im Homeoffice.',
+      },
+      explanation_i18n: {
+        en: 'Shows wir sind used with negation (nicht) and locations.',
+        fr: 'Montre wir sind avec la négation nicht et une indication de lieu.',
+        de: 'Zeigt wir sind mit Verneinung (nicht) und Ortsangaben.',
+      },
+    },
+    {
+      id: 'ex-6',
+      sentence: 'Kinder, seid ihr schon fertig mit dem Frühstück?',
+      highlight: 'seid',
+      note: '2nd person plural (ihr seid)',
+      translation_i18n: {
+        en: 'Children, are you already finished with breakfast?',
+        fr: 'Les enfants, avez-vous déjà fini le petit-déjeuner ?',
+        de: 'Kinder, seid ihr schon fertig mit dem Frühstück?',
+      },
+      explanation_i18n: {
+        en: 'Demonstrates seid (spelled with -d) paired with ihr in a question.',
+        fr: 'Illustre la forme seid (avec un d) associée au pronom ihr.',
+        de: 'Zeigt die Verbform seid (mit d) zusammen mit ihr in einer Frage.',
+      },
+    },
+    {
+      id: 'ex-7',
+      sentence: 'Guten Morgen, Herr Braun! Sind Sie neu hier in der Firma?',
+      highlight: 'Sind Sie',
+      note: 'Formal address in a question',
+      translation_i18n: {
+        en: 'Good morning, Mr. Braun! Are you new here at the company?',
+        fr: 'Bonjour Monsieur Braun ! Êtes-vous nouveau ici dans l’entreprise ?',
+        de: 'Guten Morgen, Herr Braun! Sind Sie neu hier in der Firma?',
+      },
+      explanation_i18n: {
+        en: 'Uses Sind Sie (with plural verb form sind) to address one person formally.',
+        fr: 'Utilise Sind Sie (verbe au pluriel) pour vouvoyer une personne poliment.',
+        de: 'Verwendet Sind Sie für eine höfliche Frage an eine einzelne Person.',
+      },
+    },
+    {
+      id: 'ex-8',
+      sentence: 'Heute ist das Wetter sehr kalt, deshalb bin ich lieber drinnen.',
+      highlight: 'ist / bin',
+      note: 'Inversion keeping sein in Position 2',
+      translation_i18n: {
+        en: 'Today the weather is very cold, so I prefer to be indoors.',
+        fr: 'Aujourd’hui il fait très froid, c’est pourquoi je préfère rester à l’intérieur.',
+        de: 'Heute ist das Wetter sehr kalt, deshalb bin ich lieber drinnen.',
+      },
+      explanation_i18n: {
+        en: 'Both clauses begin with an adverb (Heute / deshalb), so ist and bin remain in Position 2 right before the subject.',
+        fr: 'Les deux propositions commencent par un adverbe (Heute / deshalb) : ist et bin restent en position 2 juste avant le sujet.',
+        de: 'Beide Hauptsätze beginnen mit einem Adverb (Heute / deshalb); ist und bin bleiben jeweils auf Position 2.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-seid-seit',
+      contrast_pair: 'seid (verb)  vs.  seit (preposition / conjunction)',
+      title_i18n: {
+        en: 'seid vs. seit: identical sound, completely different roles',
+        fr: 'seid vs seit : même prononciation, fonctions totalement différentes',
+        de: 'seid vs. seit: gleiche Aussprache, verschiedene Wortarten',
+      },
+      body_i18n: {
+        en: 'Both words sound like [zaɪt]. Write seid (with d) ONLY for the verb sein with ihr ("Ihr seid super!"). Write seit (with t) for time expressions meaning "since / for" ("Ich wohne seit Mai hier.").',
+        fr: 'Les deux mots se prononcent [zaɪt]. On écrit seid (avec un d) UNIQUEMENT pour le verbe sein avec ihr (« Ihr seid super ! »). On écrit seit (avec un t) pour la durée ou le point de départ dans le temps (« Ich wohne seit Mai hier. »).',
+        de: 'Beide Wörter klingen gleich ([zaɪt]). Man schreibt seid (mit d) NUR als Verbform zu ihr („Ihr seid super!“). Man schreibt seit (mit t) als Zeitangabe („Ich wohne seit Mai hier.“).',
+      },
+    },
+    {
+      id: 'contrast-sein-professions',
+      contrast_pair: 'Sie ist Lehrerin  vs.  Sie ist eine gute Lehrerin',
+      title_i18n: {
+        en: 'Professions with and without an article',
+        fr: 'Professions avec ou sans article indéfini',
+        de: 'Berufe mit oder ohne Artikel nach sein',
+      },
+      body_i18n: {
+        en: 'Standalone professions, roles, and nationalities after sein take no article ("Er ist Koch", "Sie ist Studentin"). When you add an adjective, use the article ("Er ist ein guter Koch").',
+        fr: 'Employés seuls après sein, les métiers et nationalités ne prennent pas d’article (« Er ist Koch »). Dès qu’on ajoute un adjectif, l’article réapparaît (« Er ist ein guter Koch »).',
+        de: 'Alleinstehende Berufe und Nationalitäten nach sein stehen ohne Artikel („Er ist Koch“). Mit einem Adjektiv steht ein Artikel („Er ist ein guter Koch“).',
+      },
+    },
+    {
+      id: 'contrast-sein-vs-haben-states',
+      contrast_pair: 'sein + Adjektiv  vs.  haben + Nomen',
+      title_i18n: {
+        en: 'Age and states: sein vs. haben',
+        fr: 'Âge et états physiques : sein vs haben',
+        de: 'Alter und Befinden: sein vs. haben',
+      },
+      body_i18n: {
+        en: 'Age always takes sein ("Ich bin 20 Jahre alt"). For sensations, German often allows either sein + adjective ("Ich bin hungrig / durstig") or haben + noun ("Ich habe Hunger / Durst"), with the haben + noun phrasing very common in everyday speech.',
+        fr: 'L’âge utilise toujours sein (« Ich bin 20 Jahre alt »). Pour la faim ou la soif, l’allemand permet sein + adjectif (« Ich bin hungrig / durstig ») ou haben + nom (« Ich habe Hunger / Durst »), cette dernière tournure étant très courante à l’oral.',
+        de: 'Das Alter steht immer mit sein („Ich bin 20 Jahre alt“). Bei Hunger oder Durst gibt es sowohl sein + Adjektiv („Ich bin hungrig“) als auch haben + Nomen („Ich habe Hunger“).',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Ich habe 22 Jahre alt.',
+      right: 'Ich bin 22 Jahre alt.',
+      explanation_i18n: {
+        en: 'German expresses age with the verb sein ("to be"), never with haben ("to have").',
+        fr: 'En allemand, l’âge se construit avec le verbe sein (« être ») et jamais avec haben (« avoir »).',
+        de: 'Das Alter wird im Deutschen immer mit sein gebildet, niemals mit haben.',
+      },
+      principle_i18n: {
+        en: 'Always pair age with sein: ich bin ... Jahre alt.',
+        fr: 'Utilisez toujours sein pour l’âge : ich bin ... Jahre alt.',
+        de: 'Verwende beim Alter immer sein: ich bin ... Jahre alt.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Ihr seit heute sehr fleißig.',
+      right: 'Ihr seid heute sehr fleißig.',
+      explanation_i18n: {
+        en: 'The verb form for ihr is spelled seid (with d); seit (with t) is only a time preposition or conjunction.',
+        fr: 'La forme verbale correspondant à ihr s’écrit seid (avec un d) ; seit (avec un t) sert uniquement pour le temps (« depuis »).',
+        de: 'Die Verbform zu ihr schreibt man seid (mit d); seit (mit t) ist eine Zeitangabe.',
+      },
+      principle_i18n: {
+        en: 'Remember: d for Verb (du bist / ihr seid), t for Time (seit).',
+        fr: 'Astuce : seid avec d = verbe (ihr seid), seit avec t = temps.',
+        de: 'Eselsbrücke: seid mit d = Verb (ihr seid), seit mit t = Zeit.',
+      },
+    },
+    {
+      id: 'cm-3',
+      wrong: 'Du ist mein bester Freund.',
+      right: 'Du bist mein bester Freund.',
+      explanation_i18n: {
+        en: 'ist is only for er/sie/es; du requires bist.',
+        fr: 'ist est réservé à er/sie/es ; avec du, la forme correcte est bist.',
+        de: 'ist gehört zur 3. Person Singular (er/sie/es); zu du gehört bist.',
+      },
+      principle_i18n: {
+        en: 'Match each subject pronoun to its unique form of sein (du bist, er/sie/es ist).',
+        fr: 'Associez chaque pronom à sa forme propre : du bist, er/sie/es ist.',
+        de: 'Achte auf die genaue Zuordnung: du bist, er/sie/es ist.',
+      },
+    },
+    {
+      id: 'cm-4',
+      wrong: 'Wir ist aus der Türkei.',
+      right: 'Wir sind aus der Türkei.',
+      explanation_i18n: {
+        en: 'The plural pronoun wir always takes sind, not singular ist.',
+        fr: 'Le pronom pluriel wir demande la forme sind et non le singulier ist.',
+        de: 'Das Plural-Pronomen wir braucht die Pluralform sind, nicht ist.',
+      },
+      principle_i18n: {
+        en: 'All 1st and 3rd person plural subjects (wir, sie, Sie) take sind.',
+        fr: 'Les sujets pluriels wir, sie et Sie prennent toujours sind.',
+        de: 'Nach wir, sie (Plural) und Sie steht immer sind.',
+      },
+    },
+    {
+      id: 'cm-5',
+      wrong: 'Heute ich bin sehr müde.',
+      right: 'Heute bin ich sehr müde.',
+      explanation_i18n: {
+        en: 'In a German main clause, the conjugated verb (bin) must occupy Position 2, so it comes before ich when Heute is in Position 1.',
+        fr: 'Dans une proposition principale allemande, le verbe conjugué (bin) doit rester en position 2 : il se place donc avant ich lorsque Heute ouvre la phrase.',
+        de: 'Im deutschen Hauptsatz steht das konjugierte Verb (bin) immer auf Position 2 – nach Heute folgt also direkt bin.',
+      },
+      principle_i18n: {
+        en: 'Keep sein in Position 2 in statements (Subject–Verb or Adverb–Verb–Subject).',
+        fr: 'Laissez sein en 2e position dans l’énoncé (Adverbe + Verbe + Sujet).',
+        de: 'Stelle sein im Aussagesatz immer an Position 2 (Vorfeld + Verb + Subjekt).',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'sein is completely irregular in the present tense: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind.',
+      key_pattern: 'Use sein for identity, professions (without ein/eine), origin, age (Jahre alt), location, descriptions, and time/weather; keep it in Position 2 in statements and Position 1 in yes/no questions.',
+      mistake_warning: 'Never use haben for age (*Ich habe 20 Jahre), and do not confuse ihr seid (verb, with d) with seit (time, with t).',
+      self_check: 'Translate into German: "Are you (plural informal) from Berlin? No, we are from Vienna and I am 19 years old."',
+    },
+    fr: {
+      central_rule: 'sein est irrégulier au présent : ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind.',
+      key_pattern: 'Utilisez sein pour l’identité, la profession (sans ein/eine), l’origine, l’âge (Jahre alt), le lieu, la description et l’heure ; placez-le en position 2 (affirmation) ou 1 (question fermée).',
+      mistake_warning: 'N’employez jamais haben pour l’âge (*Ich habe 20 Jahre) et ne confondez pas ihr seid (verbe, avec d) avec seit (temps, avec t).',
+      self_check: 'Traduisez en allemand : « Êtes-vous (tu pluriel) de Berlin ? Non, nous sommes de Vienne et j’ai 19 ans. »',
+    },
+    de: {
+      central_rule: 'sein ist im Präsens unregelmäßig: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind.',
+      key_pattern: 'Verwende sein für Identität, Berufe (ohne Artikel), Herkunft, Alter (Jahre alt), Ort, Eigenschaften und Zeit; im Aussagesatz Position 2, in der Ja-/Nein-Frage Position 1.',
+      mistake_warning: 'Sage für das Alter nie *Ich habe 20 Jahre und verwechsle ihr seid (Verb mit d) nicht mit seit (Zeit mit t).',
+      self_check: 'Bilde einen Satz mit ihr seid, einen mit Alter und eine Ja-/Nein-Frage mit Sie.',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-03-sein-conjugation',
+      label_i18n: {
+        en: 'Conjugating sein accurately with all personal pronouns and noun subjects',
+        fr: 'Conjugaison de sein avec tous les pronoms et sujets nominaux',
+        de: 'Konjugation von sein mit allen Pronomen und Nomen-Subjekten',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'matching'],
+    },
+    {
+      id: 'a1-03-sein-usage-contexts',
+      label_i18n: {
+        en: 'Using sein for age, professions (no article), origin, and time/weather',
+        fr: 'Emploi de sein pour l’âge, les métiers (sans article), l’origine et l’heure',
+        de: 'Verwendung von sein bei Alter, Berufen (ohne Artikel), Herkunft und Zeit',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'translation', 'error_correction'],
+    },
+    {
+      id: 'a1-03-sein-word-order',
+      label_i18n: {
+        en: 'Placing sein in Position 2 (statements/inversion) and Position 1 (yes/no questions)',
+        fr: 'Position de sein (position 2 dans l’énoncé, position 1 dans la question fermée)',
+        de: 'Verbstellung von sein (Position 2 im Aussagesatz, Position 1 in Ja-/Nein-Fragen)',
+      },
+      formats: ['sentence_construction', 'transformation', 'error_correction'],
+    },
+    {
+      id: 'a1-03-seid-vs-seit',
+      label_i18n: {
+        en: 'Distinguishing the verb form ihr seid from the time word seit',
+        fr: 'Distinction entre la forme verbale ihr seid et le mot temporel seit',
+        de: 'Unterscheidung von ihr seid (Verb) und seit (Zeitangabe)',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'true_false', 'error_correction'],
+    },
+  ],
+};

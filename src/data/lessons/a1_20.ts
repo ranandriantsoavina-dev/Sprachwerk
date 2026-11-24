@@ -1,0 +1,305 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_20: Lesson = {
+  id: 'a1-20',
+  level: 'A1',
+  unit: 20,
+  title_en: 'Verb position',
+  title_de: 'Verbposition',
+  topic: 'Verb position',
+  hasContent: true,
+  tags: ['verbposition', 'v1', 'v2', 'satzklammer'],
+  estimated_study_minutes: 15,
+  prerequisite_knowledge_i18n: {
+    en: 'Connects yes/no questions (A1-17), W-questions (A1-18), and main clause word order (A1-19).',
+    fr: 'Relie les questions fermées (A1-17), les W-Fragen (A1-18) et la phrase déclarative (A1-19).',
+    de: 'Verbindet Ja-/Nein-Fragen (A1-17), W-Fragen (A1-18) und den Satzbau im Hauptsatz (A1-19).',
+  },
+  objectives: {
+    en: 'Identify and apply the three core German verb positions at A1: V2 in statements and W-questions, V1 in yes/no questions and imperatives, and the sentence bracket (Satzklammer) when a verb has two parts.',
+    fr: 'Identifier et appliquer les trois positions du verbe au niveau A1 : V2 dans les déclaratives et W-Fragen, V1 dans les questions fermées et l’impératif, et l’encadrement verbal (Satzklammer).',
+    de: 'Die drei zentralen Verbpositionen auf A1-Niveau anwenden: V2 in Aussagesätzen und W-Fragen, V1 in Ja-/Nein-Fragen und Imperativen sowie die Satzklammer bei zweiteiligen Verben.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Place the conjugated verb in Position 2 (V2) for statements and W-questions.',
+      'Place the conjugated verb in Position 1 (V1) for yes/no questions and imperatives.',
+      'Build a sentence bracket (Satzklammer) with two-part verb structures (modal verb + infinitive, separable verb prefix), keeping the second part at the very end.',
+    ],
+    fr: [
+      'Placer le verbe conjugué en position 2 (V2) dans les phrases déclaratives et les W-Fragen.',
+      'Placer le verbe conjugué en position 1 (V1) dans les questions fermées et à l’impératif.',
+      'Construire l’encadrement verbal (Satzklammer) avec les verbes en deux parties (modaux + infinitif, particule séparable), en renvoyant la seconde partie tout à la fin.',
+    ],
+    de: [
+      'Das konjugierte Verb in Aussagesätzen und W-Fragen auf Position 2 (V2) setzen.',
+      'Das konjugierte Verb in Ja-/Nein-Fragen und Imperativen auf Position 1 (V1) setzen.',
+      'Bei zweiteiligen Verben (Modalverb + Infinitiv, trennbares Verb) die Satzklammer bilden und den zweiten Teil ans Satzende stellen.',
+    ],
+  },
+  introduction_i18n: {
+    en: 'In German, the position of the verb is the clearest clue to sentence type. Rather than memorizing random word orders, A1 learners only need two main verb positions for the conjugated verb (Position 1 and Position 2) plus the "sentence bracket" rule when a verb comes in two pieces.',
+    fr: 'En allemand, la place du verbe indique immédiatement le type de phrase. Au niveau A1, tout repose sur deux positions fixes pour le verbe conjugué (Position 1 et Position 2) et sur le principe de l’encadrement verbal (Satzklammer) dès qu’un verbe comporte deux éléments.',
+    de: 'Im Deutschen zeigt die Position des Verbs sofort die Satzart an. Auf A1-Niveau genügen zwei feste Plätze für das konjugierte Verb (Position 1 und Position 2) sowie das Prinzip der Satzklammer für zweiteilige Prädikate.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Conjugated verb in Position 2 (V2)',
+      'Use V2 in:',
+      '• Statements: "Anna (1) lernt (2) Deutsch." / "Heute (1) lernt (2) Anna Deutsch."',
+      '• W-questions: "Wann (1) beginnt (2) der Kurs?"',
+      'Position 1 can hold any single sentence unit, not only the subject.',
+      '',
+      '2. Conjugated verb in Position 1 (V1)',
+      'Use V1 in:',
+      '• Yes/no questions: "Kommst (1) du heute mit?"',
+      '• Imperatives (commands/requests): "Lesen (1) Sie bitte den Text!" / "Mach (1) das Fenster auf!"',
+      '',
+      '3. The sentence bracket (Satzklammer) with two-part verbs',
+      'When a clause has a modal verb + infinitive ("kann ... schwimmen") or a separable verb ("steht ... auf"), only the conjugated part goes in Position 2 (or Position 1 in questions). The infinitive or prefix moves to the very end of the clause, enclosing everything else inside a bracket:',
+      '• "Wir können (Pos. 2) am Samstag im Park Fußball spielen (End)."',
+      '• "Stehst (Pos. 1) du jeden Morgen um sieben Uhr auf (End)?"',
+    ].join('\n'),
+    fr: [
+      '1. Le verbe conjugué en Position 2 (V2)',
+      'On emploie V2 dans :',
+      '• Les phrases déclaratives : « Anna (1) lernt (2) Deutsch. » / « Heute (1) lernt (2) Anna Deutsch. »',
+      '• Les questions en W : « Wann (1) beginnt (2) der Kurs? »',
+      '',
+      '2. Le verbe conjugué en Position 1 (V1)',
+      'On emploie V1 dans :',
+      '• Les questions fermées (oui/non) : « Kommst (1) du heute mit? »',
+      '• L’impératif : « Lesen (1) Sie bitte den Text! »',
+      '',
+      '3. L’encadrement verbal (Satzklammer)',
+      'Quand la phrase contient deux éléments verbaux (modal + infinitif ou verbe à particule séparable), seul le verbe conjugué reste en position 2 (ou 1 dans une question). L’infinitif ou la particule se place tout à la fin :',
+      '• « Wir können (Pos. 2) am Samstag im Park Fußball spielen (Fin). »',
+      '• « Stehst (Pos. 1) du jeden Morgen um sieben Uhr auf (Fin)? »',
+    ].join('\n'),
+    de: [
+      '1. Das konjugierte Verb auf Position 2 (Verbzweitstellung / V2)',
+      'V2 steht in:',
+      '• Aussagesätzen: „Anna (1) lernt (2) Deutsch.“ / „Heute (1) lernt (2) Anna Deutsch.“',
+      '• W-Fragen: „Wann (1) beginnt (2) der Kurs?“',
+      '',
+      '2. Das konjugierte Verb auf Position 1 (Verberststellung / V1)',
+      'V1 steht in:',
+      '• Ja-/Nein-Fragen: „Kommst (1) du heute mit?“',
+      '• Imperativsätzen: „Lesen (1) Sie bitte den Text!“ / „Mach (1) das Fenster auf!“',
+      '',
+      '3. Die Satzklammer bei zweiteiligen Verben',
+      'Besteht das Prädikat aus zwei Teilen (Modalverb + Infinitiv oder trennbares Verb), steht nur der konjugierte Teil auf Position 2 (bzw. 1). Der zweite Teil wandert ganz ans Satzende und bildet mit dem ersten Teil eine Klammer:',
+      '• „Wir können (Pos. 2) am Samstag im Park Fußball spielen (Ende).“',
+      '• „Stehst (Pos. 1) du jeden Morgen um sieben Uhr auf (Ende)?“',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-v1-vs-v2',
+      title: 'V2 für Aussagen und W-Fragen; V1 für Ja-/Nein-Fragen und Imperativ',
+      body: 'Die Satzart bestimmt die Stelle des konjugierten Verbs: Position 2 bei Aussagen/W-Fragen, Position 1 bei Entscheidungsfragen und Aufforderungen.',
+      title_i18n: {
+        en: 'V2 for statements & W-questions; V1 for yes/no questions & imperatives',
+        fr: 'V2 pour déclaratives et W-Fragen ; V1 pour questions fermées et impératif',
+        de: 'V2 für Aussagen und W-Fragen; V1 für Ja-/Nein-Fragen und Imperativ',
+      },
+      body_i18n: {
+        en: 'Statements and W-questions always keep the conjugated verb in Position 2. Yes/no questions and commands open with the conjugated verb in Position 1.',
+        fr: 'Les phrases déclaratives et W-Fragen gardent le verbe conjugué en position 2 ; les questions oui/non et l’impératif commencent par le verbe en position 1.',
+        de: 'Aussagesätze und W-Fragen haben das konjugierte Verb auf Position 2; Ja-/Nein-Fragen und Imperative beginnen direkt mit dem Verb (Position 1).',
+      },
+    },
+    {
+      id: 'rule-satzklammer',
+      title: 'Die Satzklammer: Teil 1 vorn, Teil 2 ganz am Ende',
+      body: 'Bei Modalverben und trennbaren Verben stehen alle anderen Satzglieder zwischen dem konjugierten Verb und dem Infinitiv bzw. Präfix.',
+      title_i18n: {
+        en: 'Sentence bracket: conjugated part early, non-finite part at the end',
+        fr: 'Satzklammer : verbe conjugué devant, infinitif ou particule à la fin',
+        de: 'Die Satzklammer: Teil 1 vorn, Teil 2 ganz am Ende',
+      },
+      body_i18n: {
+        en: 'Never keep a modal infinitive right next to the modal verb when there are other objects or time words: "Ich muss jetzt meine Hausaufgaben machen."',
+        fr: 'Ne collez pas l’infinitif au verbe de modalité s’il y a des compléments : « Ich muss jetzt meine Hausaufgaben machen. »',
+        de: 'Zwischen Modalverb und Infinitiv stehen alle anderen Angaben: „Ich muss jetzt meine Hausaufgaben machen.“',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'tbl-verb-positions',
+      title_i18n: {
+        en: 'Summary of A1 German verb positions',
+        fr: 'Résumé des positions du verbe au niveau A1',
+        de: 'Übersicht: Verbpositionen im Deutschen (A1)',
+      },
+      columns_i18n: {
+        en: ['Sentence type', 'Pos. 1', 'Pos. 2 (Verb)', 'Middle field', 'Sentence end'],
+        fr: ['Type de phrase', 'Pos. 1', 'Pos. 2 (Verbe)', 'Champ médian', 'Fin de phrase'],
+        de: ['Satzart', 'Pos. 1', 'Pos. 2 (Verb)', 'Mittelfeld', 'Satzende'],
+      },
+      rows: [
+        ['Statement (simple)', 'Ich', 'kaufe', 'heute Brot', '—'],
+        ['Statement (inverted)', 'Heute', 'kaufe', 'ich Brot', '—'],
+        ['Statement (bracket)', 'Ich', 'muss', 'heute noch viel', 'arbeiten.'],
+        ['W-question', 'Wann', 'fährt', 'der Zug heute', 'ab?'],
+        ['Yes/no question (V1)', '—', 'Willst (Pos. 1)', 'du heute Abend', 'kommen?'],
+        ['Imperative (V1)', '—', 'Schließen (Pos. 1)', 'Sie bitte das Fenster', '—'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Am Nachmittag muss Maria noch für die Prüfung lernen.',
+      highlight: 'muss ... lernen',
+      note: 'V2 modal verb + inversion + infinitive at the end',
+      translation_i18n: {
+        en: 'In the afternoon Maria still has to study for the exam.',
+        fr: 'L’après-midi, Maria doit encore réviser pour l’examen.',
+        de: 'Am Nachmittag muss Maria noch für die Prüfung lernen.',
+      },
+      explanation_i18n: {
+        en: 'Am Nachmittag fills Pos. 1, muss stays in Pos. 2, Maria moves to Pos. 3, and lernen closes the sentence bracket.',
+        fr: 'Am Nachmittag est en pos. 1, muss en pos. 2, Maria en pos. 3 et lernen ferme la parenthèse verbale à la fin.',
+        de: 'Am Nachmittag steht auf Pos. 1, muss auf Pos. 2, Maria auf Pos. 3 und lernen bildet das Satzende.',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Rufen Sie mich bitte morgen früh im Büro an!',
+      highlight: 'Rufen ... an',
+      note: 'V1 imperative + separable prefix at the end',
+      translation_i18n: {
+        en: 'Please call me tomorrow morning at the office!',
+        fr: 'Appelez-moi s’il vous plaît demain matin au bureau !',
+        de: 'Rufen Sie mich bitte morgen früh im Büro an!',
+      },
+      explanation_i18n: {
+        en: 'As an imperative, Rufen opens in Position 1 while the separable prefix an goes to the very end.',
+        fr: 'À l’impératif, Rufen se place en position 1 et la particule séparable an ferme la phrase.',
+        de: 'Im Imperativ steht Rufen auf Position 1 und das trennbare Präfix an am Satzende.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Wann fängt das Konzert im Stadtpark an?',
+      highlight: 'fängt ... an',
+      note: 'W-question with V2 verb and end prefix',
+      translation_i18n: {
+        en: 'When does the concert in the city park start?',
+        fr: 'Quand le concert dans le parc municipal commence-t-il ?',
+        de: 'Wann fängt das Konzert im Stadtpark an?',
+      },
+      explanation_i18n: {
+        en: 'Wann is Position 1, fängt is Position 2, the subject follows, and an closes the clause.',
+        fr: 'Wann est en position 1, fängt en position 2, et la particule an conclut la question.',
+        de: 'Wann steht auf Pos. 1, fängt auf Pos. 2 und an am Ende der W-Frage.',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Kannst du am Freitag das Paket abholen?',
+      highlight: 'Kannst ... abholen',
+      note: 'V1 yes/no question with modal bracket',
+      translation_i18n: {
+        en: 'Can you pick up the package on Friday?',
+        fr: 'Peux-tu récupérer le colis vendredi ?',
+        de: 'Kannst du am Freitag das Paket abholen?',
+      },
+      explanation_i18n: {
+        en: 'Yes/no question puts Kannst in Position 1 and keeps the infinitive abholen at the end.',
+        fr: 'La question fermée place Kannst en position 1 et renvoie l’infinitif abholen à la fin.',
+        de: 'Ja-/Nein-Frage mit Kannst auf Pos. 1 und dem Infinitiv abholen am Ende.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-v2-vs-final',
+      contrast_pair: 'Ich trinke Kaffee.  vs.  Ich möchte einen Kaffee trinken.',
+      title_i18n: {
+        en: 'One-word verb vs. two-part verb bracket',
+        fr: 'Verbe simple vs encadrement verbal en deux parties',
+        de: 'Einteiliges Verb vs. zweiteilige Satzklammer',
+      },
+      body_i18n: {
+        en: 'A single verb sits completely in Position 2 ("Ich trinke einen Kaffee"). As soon as a modal verb joins it, the conjugated modal takes Position 2 and the main verb goes to the end as an infinitive ("Ich möchte jetzt einen Kaffee trinken").',
+        fr: 'Un verbe simple occupe à lui seul la position 2. Dès qu’un modal s’y ajoute, le modal conjugué reste en position 2 et l’infinitif part tout à la fin.',
+        de: 'Ein einzelnes Verb steht komplett auf Position 2. Mit einem Modalverb bleibt nur das konjugierte Modalverb auf Position 2, der Infinitiv rückt ans Satzende.',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Ich muss lernen heute Deutsch.',
+      right: 'Ich muss heute Deutsch lernen.',
+      explanation_i18n: {
+        en: 'Do not place the infinitive lernen right after the modal verb; it belongs at the very end of the sentence.',
+        fr: 'Ne placez pas l’infinitif lernen juste après muss : il doit fermer la phrase à la fin.',
+        de: 'Der Infinitiv lernen darf nicht direkt hinter dem Modalverb stehen, sondern gehört ans Satzende.',
+      },
+      principle_i18n: {
+        en: 'In two-part verbs, put the infinitive or separable prefix at the very end of the clause.',
+        fr: 'Avec deux éléments verbaux, renvoyez l’infinitif ou la particule à la fin de la proposition.',
+        de: 'Zweite Verbteile (Infinitiv, Präfix) stehen im Hauptsatz immer ganz am Ende.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Morgen wir gehen ins Kino.',
+      right: 'Morgen gehen wir ins Kino.',
+      explanation_i18n: {
+        en: 'Morgen takes Position 1, so the conjugated verb gehen must follow immediately in Position 2 before wir.',
+        fr: 'Morgen étant en position 1, gehen doit suivre immédiatement en position 2 avant wir.',
+        de: 'Da Morgen auf Position 1 steht, muss das konjugierte Verb gehen auf Position 2 vor wir stehen.',
+      },
+      principle_i18n: {
+        en: 'Keep the conjugated verb in Position 2 in every declarative main clause.',
+        fr: 'Conservez toujours le verbe conjugué en position 2 dans une phrase déclarative.',
+        de: 'Das konjugierte Verb steht im Aussagesatz immer auf Position 2.',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'Statements and W-questions use V2; yes/no questions and imperatives use V1; second verb parts (infinitives, separable prefixes) go to the end.',
+      key_pattern: '[Pos. 1] + [Conjugated Verb (Pos. 2)] + [Middle Field] + [Infinitive / Prefix (End)]',
+      mistake_warning: 'Never leave an infinitive next to a modal verb in the middle of the clause when objects or adverbs follow.',
+      self_check: 'Put in order: "heute / muss / arbeiten / Thomas / bis 19 Uhr".',
+    },
+    fr: {
+      central_rule: 'Déclaratives et W-Fragen = V2 ; questions fermées et impératif = V1 ; infinitifs et particules séparables vont à la fin.',
+      key_pattern: '[Pos. 1] + [Verbe conjugué (Pos. 2)] + [Champ médian] + [Infinitif / Particule (Fin)]',
+      mistake_warning: 'Ne laissez pas l’infinitif collé au verbe modal devant les compléments.',
+      self_check: 'Remettez dans l’ordre : « heute / muss / arbeiten / Thomas / bis 19 Uhr ».',
+    },
+    de: {
+      central_rule: 'Aussagesätze und W-Fragen: Verb auf Position 2; Ja-/Nein-Fragen und Imperativ: Verb auf Position 1; Infinitive und Präfixe ans Ende.',
+      key_pattern: '[Pos. 1] + [Konjugiertes Verb (Pos. 2)] + [Mittelfeld] + [Infinitiv / Präfix (Ende)]',
+      mistake_warning: 'Lass den Infinitiv nicht direkt hinter dem Modalverb stehen, sondern schicke ihn ans Satzende.',
+      self_check: 'Ordne den Satz: „heute / muss / arbeiten / Thomas / bis 19 Uhr“.',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-20-v1-vs-v2',
+      label_i18n: {
+        en: 'Choosing V1 vs. V2 by sentence type',
+        fr: 'Placement V1 vs V2 selon le type de phrase',
+        de: 'Verberststellung (V1) und Verbzweitstellung (V2) sicher unterscheiden',
+      },
+      formats: ['multiple_choice', 'sentence_construction', 'error_correction'],
+    },
+    {
+      id: 'a1-20-sentence-bracket',
+      label_i18n: {
+        en: 'Forming the sentence bracket (Satzklammer) with two-part predicates',
+        fr: 'Construction de l’encadrement verbal (Satzklammer)',
+        de: 'Satzklammer mit zweitem Verbteil am Satzende bilden',
+      },
+      formats: ['sentence_construction', 'error_correction', 'transformation'],
+    },
+  ],
+};

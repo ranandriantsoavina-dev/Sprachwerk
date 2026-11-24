@@ -261,7 +261,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         )}
 
         {/* Main Viewport */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-24 lg:pb-10 max-w-7xl w-full mx-auto min-w-0">
+        <main className="flex-1 px-4 sm:px-6 lg:px-6 xl:px-8 py-5 sm:py-6 pb-24 lg:pb-10 max-w-7xl w-full mx-auto min-w-0">
           {children}
         </main>
       </div>

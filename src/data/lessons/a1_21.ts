@@ -1,0 +1,362 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_21: Lesson = {
+  id: 'a1-21',
+  level: 'A1',
+  unit: 21,
+  title_en: 'Modal verbs: können, müssen, wollen',
+  title_de: 'Modalverben',
+  topic: 'Modal verbs: können, müssen, wollen',
+  hasContent: true,
+  tags: ['modalverben', 'koennen-muessen-wollen', 'satzklammer', 'infinitiv'],
+  estimated_study_minutes: 15,
+  prerequisite_knowledge_i18n: {
+    en: 'Builds on present-tense conjugation (A1-06) and verb bracket word order (A1-20).',
+    fr: 'S’appuie sur la conjugaison au présent (A1-06) et l’encadrement verbal (A1-20).',
+    de: 'Baut auf dem Präsens (A1-06) und der Satzklammer (A1-20) auf.',
+  },
+  objectives: {
+    en: 'Conjugate können, müssen, and wollen (plus recognize dürfen, sollen, möchten) with identical ich and er/sie/es forms, build the modal verb + end-position infinitive bracket, and avoid the English "must not" trap with nicht müssen.',
+    fr: 'Conjuguer können, müssen et wollen (et connaître möchten/dürfen/sollen) avec des formes identiques à ich et er/sie/es, construire la parenthèse avec l’infinitif final et éviter le piège de nicht müssen.',
+    de: 'können, müssen und wollen (sowie möchten, dürfen, sollen im Überblick) sicher konjugieren, mit Infinitiv am Satzende verbinden und nicht müssen richtig von nicht dürfen unterscheiden.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Conjugate können, müssen, and wollen accurately in the present tense, noting the vowel change in all singular forms and zero endings for ich and er/sie/es.',
+      'Pair a conjugated modal verb in Position 2 (or 1 in questions) with a bare infinitive (without zu) at the end of the clause.',
+      'Express ability/possibility (können), necessity/obligation (müssen), and desire/intention (wollen, vs. polite möchten).',
+      'Distinguish nicht müssen ("don’t have to") from nicht dürfen ("must not / not allowed to").',
+    ],
+    fr: [
+      'Conjuguer können, müssen et wollen au présent en retenant le changement de voyelle au singulier et l’absence de terminaison à ich et er/sie/es.',
+      'Construire la phrase avec le modal conjugué et l’infinitif nu (sans zu) tout à la fin.',
+      'Exprimer la capacité/possibilité (können), l’obligation (müssen) et la volonté (wollen, comparé au poli möchten).',
+      'Distinguer nicht müssen (« ne pas être obligé de ») de nicht dürfen (« avoir l’interdiction de »).',
+    ],
+    de: [
+      'können, müssen und wollen im Präsens richtig beugen (Vokalwechsel im Singular, keine Endung bei ich und er/sie/es).',
+      'Modalverb auf Position 2 (bzw. 1 in Fragen) mit einem Infinitiv ohne zu am Satzende kombinieren.',
+      'Fähigkeit/Möglichkeit (können), Notwendigkeit (müssen) und Wunsch/Absicht (wollen vs. höfliches möchten) ausdrücken.',
+      'nicht müssen (keine Pflicht) von nicht dürfen (Verbot) klar abgrenzen.',
+    ],
+  },
+  introduction_i18n: {
+    en: 'Modal verbs modify the attitude toward an action—saying whether you can do something (können), have to do it (müssen), or want to do it (wollen). In German, modal verbs follow one remarkably consistent conjugation pattern and always push the main action verb to the end of the sentence in its infinitive form.',
+    fr: 'Les verbes de modalité précisent l’attitude face à l’action : pouvoir (können), devoir (müssen) ou vouloir (wollen). En allemand, ils partagent un modèle de conjugaison très régulier au présent et renvoient toujours le verbe principal à l’infinitif en fin de phrase.',
+    de: 'Modalverben zeigen, wie man zu einer Handlung steht: ob man etwas kann (können), muss (müssen) oder will (wollen). Sie folgen im Präsens einem einheitlichen Konjugationsmuster und schicken das Vollverb im Infinitiv ans Satzende.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Special conjugation pattern of modal verbs',
+      'Look at the two hallmark rules for können, müssen, and wollen (and also dürfen / sollen):',
+      '• ich and er/sie/es are ALWAYS identical and have NO -e or -t ending: ich kann / er kann; ich muss / sie muss; ich will / es will.',
+      '• All singular forms (ich, du, er/sie/es) change their stem vowel (könn- → kann, müss- → muss, woll- → will), while all plural forms (wir, ihr, sie/Sie) keep the infinitive vowel and use regular endings (wir können, ihr könnt, sie können).',
+      '',
+      '2. Word order: Modal + ... + bare Infinitive',
+      'Place the conjugated modal verb in Position 2 (or Position 1 in yes/no questions) and put the second verb at the very end as an infinitive—never add zu before it:',
+      '• "Ich kann sehr gut schwimmen." / "Musst du heute lange arbeiten?"',
+      'Occasionally, when the action is obvious from context, the infinitive can be omitted: "Ich kann Englisch [sprechen]." / "Wir müssen jetzt nach Hause [gehen]."',
+      '',
+      '3. Core meanings + polite möchten & prohibition nicht dürfen',
+      '• können = ability, skill, or possibility ("Kannst du mir helfen?").',
+      '• müssen = necessity or obligation ("Ich muss um 6 Uhr aufstehen.").',
+      '• wollen = firm wish, plan, or intention ("Wir wollen ein Haus kaufen."). For polite requests in cafés or shops, use möchten (ich möchte, du möchtest, er/sie/es möchte): "Ich möchte bitte einen Tee."',
+      '• Critical warning: nicht müssen means "don’t have to" (no obligation), NOT "must not"! To say "must not / not allowed to", German uses nicht dürfen ("Hier darf man nicht rauchen.").',
+    ].join('\n'),
+    fr: [
+      '1. Le modèle de conjugaison des verbes de modalité',
+      'Retenez deux caractéristiques essentielles pour können, müssen et wollen :',
+      '• ich et er/sie/es sont TOUJOURS identiques et sans terminaison (-e ou -t) : ich kann / er kann ; ich muss / sie muss ; ich will / es will.',
+      '• Le singulier (ich, du, er/sie/es) change de voyelle (kann-, muss-, will-), tandis que le pluriel (wir, ihr, sie/Sie) garde la voyelle de l’infinitif (können, müssen, wollen).',
+      '',
+      '2. Ordre des mots : Modal + ... + Infinitif sans zu',
+      'Le modal conjugué se place en position 2 (ou 1 dans une question fermée) et le verbe principal se place à l’infinitif tout à la fin, sans jamais mettre zu :',
+      '• « Ich kann sehr gut schwimmen. » / « Musst du heute lange arbeiten? »',
+      '',
+      '3. Sens principaux et nuance importante (nicht müssen vs nicht dürfen)',
+      '• können = savoir-faire, capacité ou possibilité (« Kannst du mir helfen? »).',
+      '• müssen = nécessité ou obligation (« Ich muss um 6 Uhr aufstehen. »).',
+      '• wollen = volonté ferme, projet (« Wir wollen nach Wien fahren. »). Au restaurant ou pour demander poliment, utilisez möchten (« Ich möchte bitte einen Tee. »).',
+      '• Attention : nicht müssen signifie « ne pas avoir besoin de / ne pas être obligé de », et NON « il est interdit de ». L’interdiction s’exprime avec nicht dürfen (« Hier darf man nicht parken. »).',
+    ].join('\n'),
+    de: [
+      '1. Besonderes Konjugationsmuster der Modalverben',
+      'Für können, müssen und wollen (sowie dürfen und sollen) gelten zwei klare Regeln:',
+      '• Die 1. Person Singular (ich) und die 3. Person Singular (er/sie/es) sind immer gleich und haben keine Endung (-e / -t): ich kann / er kann, ich muss / sie muss, ich will / es will.',
+      '• Im Singular ändert sich der Stammvokal (kann-, muss-, will-); im Plural bleibt der Vokal des Infinitivs erhalten (wir können, ihr müsst, sie wollen).',
+      '',
+      '2. Satzklammer: Modalverb + ... + Infinitiv (ohne zu)',
+      'Das konjugierte Modalverb steht auf Position 2 (bzw. 1 in Ja-/Nein-Fragen), das Vollverb steht im Infinitiv ohne zu ganz am Satzende:',
+      '• „Ich kann sehr gut schwimmen.“ / „Musst du heute lange arbeiten?“',
+      '',
+      '3. Bedeutung und wichtiger Unterschied: nicht müssen vs. nicht dürfen',
+      '• können = Fähigkeit oder Möglichkeit („Kannst du mir helfen?“).',
+      '• müssen = Notwendigkeit oder Pflicht („Ich muss um 6 Uhr aufstehen.“).',
+      '• wollen = fester Wunsch oder Absicht („Wir wollen am Meer wohnen.“). Für höfliche Bitten nimmt man möchten („Ich möchte bitte zahlen.“).',
+      '• Wichtig: nicht müssen bedeutet „es ist nicht nötig“ (keine Pflicht). Ein Verbot drückt man mit nicht dürfen aus („Hier darf man nicht parken.“).',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-modal-singular-endings',
+      title: 'ich und er/sie/es sind gleich und endungslos',
+      body: 'ich kann = er kann | ich muss = sie muss | ich will = es will (niemals *er kannt oder *ich musse).',
+      title_i18n: {
+        en: 'ich and er/sie/es are identical with no ending',
+        fr: 'ich et er/sie/es sont identiques et sans terminaison',
+        de: 'ich und er/sie/es sind gleich und endungslos',
+      },
+      body_i18n: {
+        en: 'Only du takes -st (du kannst, du musst, du willst). Remember muss + st contracts to musst (two s, not three).',
+        fr: 'Seul du prend -st (du kannst, du musst, du willst). Attention : du musst s’écrit avec deux s.',
+        de: 'Nur du bekommt -st (du kannst, du musst, du willst). Beachte: du musst mit zwei s!',
+      },
+    },
+    {
+      id: 'rule-modal-infinitive-end',
+      title: 'Vollverb im Infinitiv ohne zu am Satzende',
+      body: 'Das Modalverb steht konjugiert auf Position 2 (oder 1), das Vollverb im Infinitiv ganz am Satzende.',
+      title_i18n: {
+        en: 'Bare infinitive (no zu) at the very end',
+        fr: 'Infinitif sans zu tout à la fin de la phrase',
+        de: 'Vollverb im Infinitiv ohne zu am Satzende',
+      },
+      body_i18n: {
+        en: 'Never insert zu before the infinitive after a modal verb (*Ich will zu gehen is wrong; write Ich will gehen).',
+        fr: 'N’ajoutez jamais zu devant l’infinitif après un modal (*Ich will zu gehen est faux).',
+        de: 'Nach Modalverben steht der Infinitiv immer ohne zu am Satzende.',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'tbl-modal-conjugation',
+      title_i18n: {
+        en: 'Present-tense conjugation of können, müssen, wollen (plus möchten & dürfen)',
+        fr: 'Conjugaison au présent de können, müssen, wollen (avec möchten et dürfen)',
+        de: 'Präsens der Modalverben können, müssen, wollen (+ möchten, dürfen)',
+      },
+      columns_i18n: {
+        en: ['Pronoun', 'können (can)', 'müssen (must)', 'wollen (want)', 'möchten (would like)', 'dürfen (may)'],
+        fr: ['Pronom', 'können', 'müssen', 'wollen', 'möchten', 'dürfen'],
+        de: ['Pronomen', 'können', 'müssen', 'wollen', 'möchten', 'dürfen'],
+      },
+      rows: [
+        ['ich', 'kann', 'muss', 'will', 'möchte', 'darf'],
+        ['du', 'kannst', 'musst', 'willst', 'möchtest', 'darfst'],
+        ['er / sie / es', 'kann', 'muss', 'will', 'möchte', 'darf'],
+        ['wir', 'können', 'müssen', 'wollen', 'möchten', 'dürfen'],
+        ['ihr', 'könnt', 'müsst', 'wollt', 'möchtet', 'dürft'],
+        ['sie / Sie', 'können', 'müssen', 'wollen', 'möchten', 'dürfen'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Mein Kollege kann sehr gut Japanisch sprechen.',
+      highlight: 'kann ... sprechen',
+      note: 'er/sie/es form kann (no -t) + end infinitive sprechen',
+      translation_i18n: {
+        en: 'My colleague can speak Japanese very well.',
+        fr: 'Mon collègue sait très bien parler japonais.',
+        de: 'Mein Kollege kann sehr gut Japanisch sprechen.',
+      },
+      explanation_i18n: {
+        en: 'Mein Kollege (er) takes kann without -t; sprechen goes to the end of the clause.',
+        fr: 'Mein Kollege (er) se conjugue kann sans -t, et sprechen est renvoyé à la fin.',
+        de: 'Mein Kollege (er) braucht kann ohne -t; sprechen steht im Infinitiv am Ende.',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Am Montag muss ich schon um halb sieben aufstehen.',
+      highlight: 'muss ... aufstehen',
+      note: 'Inverted clause with modal verb in Pos. 2',
+      translation_i18n: {
+        en: 'On Monday I already have to get up at 6:30.',
+        fr: 'Lundi, je dois déjà me lever à 6 h 30.',
+        de: 'Am Montag muss ich schon um halb sieben aufstehen.',
+      },
+      explanation_i18n: {
+        en: 'Am Montag is Position 1; muss stays in Position 2; separable verb aufstehen stays undivided as an infinitive at the end.',
+        fr: 'Am Montag est en pos. 1, muss en pos. 2, et l’infinitif aufstehen reste entier à la fin.',
+        de: 'Am Montag auf Pos. 1, muss auf Pos. 2; der Infinitiv aufstehen bleibt am Ende zusammen.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Wollt ihr am Sonntag mit uns ins Kino gehen?',
+      highlight: 'Wollt ... gehen',
+      note: 'Yes/no question with plural modal verb (ihr wollt)',
+      translation_i18n: {
+        en: 'Do you want to go to the cinema with us on Sunday?',
+        fr: 'Voulez-vous aller au cinéma avec nous dimanche ?',
+        de: 'Wollt ihr am Sonntag mit uns ins Kino gehen?',
+      },
+      explanation_i18n: {
+        en: 'Plural ihr keeps the infinitive vowel o (wollt) in Position 1, and gehen closes the question.',
+        fr: 'Au pluriel (ihr), wollen garde la voyelle o (wollt) en position 1 ; gehen clôt la phrase.',
+        de: 'Im Plural behält wollen das o (wollt) auf Pos. 1; gehen steht am Satzende.',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Du musst heute nicht kochen, wir können eine Pizza bestellen.',
+      highlight: 'musst ... nicht kochen | können ... bestellen',
+      note: 'nicht müssen = no obligation ("don’t have to")',
+      translation_i18n: {
+        en: 'You don’t have to cook today; we can order a pizza.',
+        fr: 'Tu n’es pas obligé(e) de cuisiner aujourd’hui, nous pouvons commander une pizza.',
+        de: 'Du musst heute nicht kochen, wir können eine Pizza bestellen.',
+      },
+      explanation_i18n: {
+        en: 'musst ... nicht means "you do not need to" (no obligation), not "you are forbidden to".',
+        fr: 'musst ... nicht exprime l’absence d’obligation (« tu n’es pas obligé ») et non une interdiction.',
+        de: 'du musst nicht bedeutet „es ist nicht nötig“, nicht „es ist verboten“.',
+      },
+    },
+    {
+      id: 'ex-5',
+      sentence: 'Ich möchte bitte ein Glas Wasser und eine Brezel.',
+      highlight: 'möchte',
+      note: 'Polite ordering with möchten (optional omitted infinitive)',
+      translation_i18n: {
+        en: 'I would like a glass of water and a pretzel, please.',
+        fr: 'Je voudrais un verre d’eau et un bretzel, s’il vous plaît.',
+        de: 'Ich möchte bitte ein Glas Wasser und eine Brezel.',
+      },
+      explanation_i18n: {
+        en: 'Polite möchten replaces blunt wollen when ordering; verbs like haben or bestellen can be omitted when clear.',
+        fr: 'La forme polie möchten remplace wollen au café ou en boutique.',
+        de: 'Höfliches möchten ersetzt wollen beim Bestellen; das Vollverb (haben/bestellen) kann wegfallen.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-nicht-muessen-vs-duerfen',
+      contrast_pair: 'nicht müssen  (not necessary)  vs.  nicht dürfen  (forbidden)',
+      title_i18n: {
+        en: 'Critical contrast: nicht müssen vs. nicht dürfen',
+        fr: 'Distinction essentielle : nicht müssen vs nicht dürfen',
+        de: 'Wichtiger Unterschied: nicht müssen vs. nicht dürfen',
+      },
+      body_i18n: {
+        en: 'English "must not" is a false friend for *nicht müssen. In German, "Du musst heute nicht arbeiten" means "You don’t have to work today (it’s a holiday)." Prohibition is always nicht dürfen: "Hier darf man nicht telefonieren."',
+        fr: 'Faux-ami classique avec l’anglais « must not » : « Du musst nicht arbeiten » signifie « Tu n’as pas besoin de travailler ». Pour exprimer une interdiction, on emploie toujours nicht dürfen (« Hier darf man nicht fotografieren »).',
+        de: 'Wer Englisch kennt, verwechselt oft nicht müssen mit englisch „must not“. „Du musst nicht gehen“ heißt aber „Du brauchst nicht zu gehen“. Ein Verbot heißt immer nicht dürfen: „Hier darf man nicht fotografieren.“',
+      },
+    },
+    {
+      id: 'contrast-wollen-vs-moechten',
+      contrast_pair: 'wollen  (strong wish / plan)  vs.  möchten  (polite request)',
+      title_i18n: {
+        en: 'Politeness: wollen vs. möchten',
+        fr: 'Politesse : wollen vs möchten',
+        de: 'Höflichkeit: wollen vs. möchten',
+      },
+      body_i18n: {
+        en: 'Use wollen for personal plans ("Ich will nächstes Jahr nach Berlin fahren"), but use möchten when speaking to waiters, staff, or guests ("Ich möchte bitte die Rechnung"). Saying *Ich will einen Kaffee sounds demanding.',
+        fr: 'wollen exprime une intention ou volonté ferme ; möchten est la formule polie attendue dans les commerces et restaurants (« Ich möchte bitte zahlen »).',
+        de: 'wollen drückt eigene Pläne aus („Ich will Deutsch lernen“). Gegenüber Fremden, im Café oder im Geschäft ist möchten viel höflicher („Ich möchte bitte...“).',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Er kannt gut Klavier spielen.',
+      right: 'Er kann gut Klavier spielen.',
+      explanation_i18n: {
+        en: 'The 3rd person singular of modal verbs never takes -t; it matches the ich-form (ich kann = er kann).',
+        fr: 'La 3e personne du singulier des modaux ne prend jamais -t ; elle est identique à ich (kann, muss, will).',
+        de: 'Bei Modalverben bekommt er/sie/es niemals die Endung -t (ich kann = er kann).',
+      },
+      principle_i18n: {
+        en: 'Use zero endings for both ich and er/sie/es on modal verbs.',
+        fr: 'Aucune terminaison à ich et à er/sie/es pour les verbes de modalité.',
+        de: 'Bei Modalverben sind ich und er/sie/es immer endungslos und gleich.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Wir können zu heute Abend kommen.',
+      right: 'Wir können heute Abend kommen.',
+      explanation_i18n: {
+        en: 'Modal verbs take a bare infinitive without zu, placed at the end of the clause.',
+        fr: 'Après un verbe de modalité, l’infinitif s’emploie sans zu et se met en fin de phrase.',
+        de: 'Nach Modalverben steht der Infinitiv ohne zu ganz am Satzende.',
+      },
+      principle_i18n: {
+        en: 'Never insert zu before the infinitive after a modal verb.',
+        fr: 'Ne mettez jamais zu avant l’infinitif qui suit un verbe de modalité.',
+        de: 'Modalverb + Infinitiv steht immer ohne zu.',
+      },
+    },
+    {
+      id: 'cm-3',
+      wrong: 'Hier musst du nicht rauchen! (intended: Smoking is prohibited here)',
+      right: 'Hier darfst du nicht rauchen!',
+      explanation_i18n: {
+        en: 'nicht müssen means "you don’t have to"; prohibitions require nicht dürfen.',
+        fr: 'nicht müssen signifie « tu n’es pas obligé » ; une interdiction exige nicht dürfen.',
+        de: 'Ein Verbot drückt man mit nicht dürfen aus, nicht mit nicht müssen.',
+      },
+      principle_i18n: {
+        en: 'Use nicht dürfen for prohibitions and nicht müssen for lack of obligation.',
+        fr: 'Employez nicht dürfen pour l’interdiction et nicht müssen pour l’absence d’obligation.',
+        de: 'Verbot = nicht dürfen; keine Pflicht = nicht müssen.',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'Modal verbs change stem vowel in singular, have identical zero-ending ich and er/sie/es forms, and push the bare infinitive to the end.',
+      key_pattern: 'ich/er/sie/es kann, muss, will  + ... +  Infinitiv (no zu)',
+      mistake_warning: 'Never add -t to er/sie/es (not *er musset/*kannt), never add zu, and remember nicht müssen = "don’t have to".',
+      self_check: 'Translate: "She has to get up early, and he wants to learn German."',
+    },
+    fr: {
+      central_rule: 'Les modaux changent de voyelle au singulier, ont des formes ich et er/sie/es identiques sans terminaison, et renvoient l’infinitif nu à la fin.',
+      key_pattern: 'ich/er/sie/es kann, muss, will  + ... +  Infinitiv (sans zu)',
+      mistake_warning: 'Jamais de -t à er/sie/es, jamais de zu, et rappelez-vous que nicht müssen = « ne pas être obligé ».',
+      self_check: 'Traduisez : « Elle doit se lever tôt et il veut apprendre l’allemand. »',
+    },
+    de: {
+      central_rule: 'Modalverben haben im Singular Vokalwechsel, endungslose gleiche Formen bei ich und er/sie/es, und der Infinitiv ohne zu steht am Satzende.',
+      key_pattern: 'ich/er/sie/es kann, muss, will  + ... +  Infinitiv (ohne zu)',
+      mistake_warning: 'Kein -t bei er/sie/es, kein zu vor dem Infinitiv und nicht müssen ≠ Verbot (nicht dürfen).',
+      self_check: 'Ergänze: „Sie ___ früh aufstehen, und er ___ Deutsch lernen.“ (müssen, wollen)',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-21-modal-conjugation',
+      label_i18n: {
+        en: 'Conjugating können, müssen, wollen, and möchten in the present tense',
+        fr: 'Conjugaison au présent de können, müssen, wollen et möchten',
+        de: 'können, müssen, wollen und möchten im Präsens konjugieren',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'matching'],
+    },
+    {
+      id: 'a1-21-modal-bracket',
+      label_i18n: {
+        en: 'Placing the modal verb in Pos. 2/1 and the bare infinitive at the end',
+        fr: 'Construction de la phrase avec modal et infinitif final sans zu',
+        de: 'Satzklammer mit Modalverb und Infinitiv am Satzende bilden',
+      },
+      formats: ['sentence_construction', 'error_correction'],
+    },
+    {
+      id: 'a1-21-meaning-contrast',
+      label_i18n: {
+        en: 'Distinguishing können, müssen, wollen, möchten, and nicht müssen vs. nicht dürfen',
+        fr: 'Distinction sémantique (können, müssen, wollen, möchten, nicht dürfen)',
+        de: 'Bedeutung der Modalverben sowie nicht müssen vs. nicht dürfen unterscheiden',
+      },
+      formats: ['multiple_choice', 'gap_fill'],
+    },
+  ],
+};

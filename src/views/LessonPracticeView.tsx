@@ -221,6 +221,16 @@ export const LessonPracticeView: React.FC = () => {
                           </span>
                           <span aria-hidden="true">·</span>
                           <span>{lesson.level}</span>
+                          <span aria-hidden="true">·</span>
+                          {lesson.hasContent ? (
+                            <span className="font-sans font-semibold text-emerald-700 dark:text-emerald-400">
+                              {t(lang, 'lessonAvailableLabel')}
+                            </span>
+                          ) : (
+                            <span className="font-sans font-semibold text-[#DD0000] dark:text-red-400">
+                              {t(lang, 'lessonComingSoonLabel')}
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm font-semibold text-neutral-900 dark:text-white mt-0.5 break-words">
                           {lesson.title_de}

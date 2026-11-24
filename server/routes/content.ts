@@ -11,6 +11,7 @@ import {
 } from '../gamification.ts';
 import { requireAuth, type AuthenticatedRequest } from '../security.ts';
 import { LESSONS_CATALOG } from '../../src/data/lessonsCatalog.ts';
+import { QUESTIONS_CATALOG } from '../../src/data/questionsCatalog.ts';
 
 const CONTENT_DIR = path.resolve(process.cwd(), 'data', 'content');
 
@@ -48,21 +49,28 @@ export interface LessonRecord {
 function getLessonsCatalog(): LessonRecord[] {
   const fromFile = readDatasetFile<LessonRecord>('lessons.json');
   if (fromFile.length > 0) {
-    return fromFile.map((item) => ({
-      ...item,
-      hasContent: item.hasContent ?? Object.keys(item.explanation_i18n || {}).length > 0,
-    }));
+    const fileMap = new Map(fromFile.map((item) => [item.id, item]));
+    return LESSONS_CATALOG.map((baseItem) => {
+      const override = fileMap.get(baseItem.id);
+      const merged: LessonRecord = override ? { ...baseItem, ...override } : baseItem;
+      return {
+        ...merged,
+        hasContent: merged.hasContent ?? Object.keys(merged.explanation_i18n || {}).length > 0,
+      };
+    });
   }
   return LESSONS_CATALOG.map((item) => ({
     ...item,
-    hasContent: false,
+    hasContent: item.hasContent ?? Object.keys(item.explanation_i18n || {}).length > 0,
   }));
 }
 
 export interface QuestionRecord {
   id: string;
+  mode?: 'lesson-practice' | 'general-practice';
   lesson_ids: string[];
   topic_tags: string[];
+  learning_objective_id?: string;
   cefr_level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   difficulty: 'easy' | 'medium' | 'difficult' | 'extreme';
   type:
@@ -75,10 +83,31 @@ export interface QuestionRecord {
     | 'true_false'
     | 'error_correction';
   prompt_de: string;
+  prompt_i18n?: Partial<Record<'en' | 'fr' | 'de', string>>;
   options_de?: string[];
+  fragments_de?: string[];
+  matching_pairs?: Array<{ left: string; right: string }>;
   accepted_answers: string[];
   solution: string;
   explanation_i18n: Record<string, string>;
+  hint_i18n?: Partial<Record<'en' | 'fr' | 'de', string>>;
+  case_sensitive?: boolean;
+  source_language?: 'de';
+}
+
+function getQuestionsCatalog(): QuestionRecord[] {
+  const fromFile = readDatasetFile<QuestionRecord>('questions.json');
+  if (fromFile.length > 0) {
+    const map = new Map<string, QuestionRecord>();
+    for (const q of QUESTIONS_CATALOG) {
+      map.set(q.id, q);
+    }
+    for (const q of fromFile) {
+      map.set(q.id, q);
+    }
+    return Array.from(map.values());
+  }
+  return QUESTIONS_CATALOG;
 }
 
 export interface FlashcardRecord {
@@ -95,7 +124,7 @@ export function createContentRouter(db: D1Database) {
 
   router.get('/content/status', (_req, res: Response) => {
     const lessons = getLessonsCatalog();
-    const questions = readDatasetFile<QuestionRecord>('questions.json');
+    const questions = getQuestionsCatalog();
     const flashcards = readDatasetFile<FlashcardRecord>('flashcards.json');
 
     res.json({
@@ -172,7 +201,7 @@ export function createContentRouter(db: D1Database) {
         return;
       }
 
-      const questions = readDatasetFile<QuestionRecord>('questions.json').filter((q) =>
+      const questions = getQuestionsCatalog().filter((q) =>
         q.lesson_ids.includes(lesson.id)
       );
       const availableTypes = Array.from(new Set(questions.map((q) => q.type)));
@@ -283,7 +312,7 @@ export function createContentRouter(db: D1Database) {
     const { mode, topics = [], lessonIds = [], types = [], difficulty, count = 10, order = 'shuffled' } =
       _req.body || {};
 
-    const questions = readDatasetFile<QuestionRecord>('questions.json');
+    const questions = getQuestionsCatalog();
     if (questions.length === 0) {
       res.json({
         comingSoon: true,
@@ -320,7 +349,7 @@ export function createContentRouter(db: D1Database) {
       }
     }
 
-    selected = selected.slice(0, Math.max(1, Math.min(50, Number(count) || 10)));
+    selected = selected.slice(0, Math.max(1, Math.min(200, Number(count) || 10)));
     res.json({
       comingSoon: false,
       items: selected,

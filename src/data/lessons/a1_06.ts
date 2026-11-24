@@ -1,0 +1,407 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_06: Lesson = {
+  id: 'a1-06',
+  level: 'A1',
+  unit: 6,
+  title_en: 'Irregular verbs in the present tense',
+  title_de: 'Unregelmäßige Verben im Präsens',
+  topic: 'Irregular verbs in the present tense',
+  hasContent: true,
+  tags: ['unregelmaessige-verben', 'vokalwechsel', 'praesens', 'starke-verben'],
+  estimated_study_minutes: 15,
+  prerequisite_knowledge_i18n: {
+    en: 'Builds on regular present-tense endings (Lesson A1-05) and sein/haben (Lessons A1-03 and A1-04).',
+    fr: 'S’appuie sur les terminaisons du présent régulier (leçon A1-05) et sur sein/haben (leçons A1-03 et A1-04).',
+    de: 'Baut auf den regelmäßigen Präsensendungen (Lektion A1-05) sowie sein/haben (Lektionen A1-03 und A1-04) auf.',
+  },
+  objectives: {
+    en: 'Conjugate high-frequency A1 stem-changing verbs accurately, restrict vowel changes strictly to du and er/sie/es, and master special irregular forms such as nehmen, essen, and wissen.',
+    fr: 'Conjuguer les verbes fréquents à changement de voyelle au niveau A1, limiter ce changement à du et er/sie/es, et maîtriser les cas particuliers comme nehmen, essen et wissen.',
+    de: 'Häufige A1-Verben mit Vokalwechsel sicher konjugieren, den Vokalwechsel auf du und er/sie/es beschränken und Sonderformen wie nehmen, essen und wissen beherrschen.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Recognize the three core present-tense vowel shifts: e → i (sprechen, geben, helfen), e → ie (lesen, sehen), and a → ä / au → äu (fahren, schlafen, laufen).',
+      'Apply the golden rule: stem vowel changes happen ONLY in du and er/sie/es—never in ich, wir, ihr, or sie/Sie.',
+      'Conjugate common special cases accurately, including nehmen (du nimmst, er nimmt), essen (du isst, er isst), halten (du hältst, er hält), and wissen (ich/er weiß).',
+    ],
+    fr: [
+      'Reconnaître les trois alternances vocaliques du présent : e → i (sprechen, geben, helfen), e → ie (lesen, sehen) et a → ä / au → äu (fahren, schlafen, laufen).',
+      'Appliquer la règle d’or : le changement de voyelle n’a lieu qu’à du et er/sie/es, jamais à ich, wir, ihr ou sie/Sie.',
+      'Conjuguer correctement les formes particulières fréquentes : nehmen (du nimmst, er nimmt), essen (du isst, er isst), halten (du hältst, er hält) et wissen (ich/er weiß).',
+    ],
+    de: [
+      'Die drei wichtigen Vokalwechsel im Präsens erkennen: e → i (sprechen, geben, helfen), e → ie (lesen, sehen) und a → ä / au → äu (fahren, schlafen, laufen).',
+      'Die goldene Regel anwenden: Der Vokalwechsel passiert NUR bei du und er/sie/es – niemals bei ich, wir, ihr oder sie/Sie.',
+      'Häufige Sonderformen sicher beherrschen: nehmen (du nimmst, er nimmt), essen (du isst, er isst), halten (du hältst, er hält) und wissen (ich/er weiß).',
+    ],
+  },
+  introduction_i18n: {
+    en: 'Many of the most useful everyday German verbs—such as sprechen (to speak), fahren (to drive/go), lesen (to read), sehen (to see), and essen (to eat)—are called "strong" or stem-changing verbs. They still use the normal present-tense endings, but their stem vowel shifts in two specific slots: du and er/sie/es.',
+    fr: 'De nombreux verbes allemands du quotidien — comme sprechen (parler), fahren (aller en véhicule), lesen (lire), sehen (voir) ou essen (manger) — subissent une modification de la voyelle du radical au présent. Ils gardent les terminaisons habituelles, mais leur voyelle change uniquement à du et à er/sie/es.',
+    de: 'Viele wichtige Alltagsverben im Deutschen – wie sprechen, fahren, lesen, sehen oder essen – haben im Präsens einen Vokalwechsel. Sie bekommen die normalen Personalendungen, verändern aber bei du und er/sie/es den Stammvokal.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Where does the vowel change happen?',
+      'In stem-changing verbs, ich, wir, ihr, and sie/Sie keep the exact vowel of the infinitive. ONLY du (2nd person singular) and er/sie/es (3rd person singular) change the vowel.',
+      'Compare: ich fahre, wir fahren, ihr fahrt, sie fahren — versus du fährst, er fährt.',
+      '',
+      '2. The three vowel-shift patterns at A1',
+      '• e → i (short): sprechen → du sprichst, er spricht; helfen → du hilfst, er hilft; geben → du gibst, er gibt; treffen → du triffst, er trifft.',
+      '• e → ie (long): lesen → du liest, er liest; sehen → du siehst, er sieht; empfehlen → du empfiehlst, er empfiehlt.',
+      '• a → ä (and au → äu): fahren → du fährst, er fährt; schlafen → du schläfst, er schläft; tragen → du trägst, er trägt; laufen → du läufst, er läuft.',
+      '',
+      '3. High-frequency A1 special adjustments',
+      '• nehmen: drops the h and doubles the m in du nimmst, er nimmt (but: ich nehme, ihr nehmt).',
+      '• essen / vergessen / lesen: stems ending in -s/-ss take only -t in du, so du isst = er isst, du liest = er liest.',
+      '• Stem-changing verbs ending in -t (halten, raten) do NOT add an extra -e- in er/sie/es, and drop it in du: du hältst, er hält (NOT *hältet!).',
+      '• wissen (to know a fact) has an irregular singular with no -e/-t ending: ich weiß, du weißt, er/sie/es weiß, wir wissen, ihr wisst, sie/Sie wissen.',
+    ].join('\n'),
+    fr: [
+      '1. À quelles personnes la voyelle change-t-elle ?',
+      'Dans les verbes à changement vocalique, ich, wir, ihr et sie/Sie conservent la voyelle de l’infinitif. Le changement se produit UNIQUEMENT à du (2e sg.) et er/sie/es (3e sg.).',
+      'Comparez : ich fahre, wir fahren, ihr fahrt, sie fahren — face à du fährst, er fährt.',
+      '',
+      '2. Les trois grands schémas au niveau A1',
+      '• e → i (bref) : sprechen → du sprichst, er spricht ; helfen → du hilfst, er hilft ; geben → du gibst, er gibt ; treffen → du triffst, er trifft.',
+      '• e → ie (long) : lesen → du liest, er liest ; sehen → du siehst, er sieht ; empfehlen → du empfiehlst, er empfiehlt.',
+      '• a → ä (et au → äu) : fahren → du fährst, er fährt ; schlafen → du schläfst, er schläft ; tragen → du trägst, er trägt ; laufen → du läufst, er läuft.',
+      '',
+      '3. Particularités fréquentes au niveau A1',
+      '• nehmen : perd le h et double le m à du nimmst, er nimmt (mais ich nehme, ihr nehmt).',
+      '• essen / vergessen / lesen : le radical finit par s/ss, donc du et er/sie/es sont identiques (du isst = er isst ; du liest = er liest).',
+      '• Les verbes à changement vocalique en -t (halten, raten) ne prennent pas de -e- intercalaire : du hältst, er hält (et jamais *hältet !).',
+      '• wissen (savoir) a un singulier particulier sans terminaison -e/-t : ich weiß, du weißt, er/sie/es weiß, wir wissen, ihr wisst, sie/Sie wissen.',
+    ].join('\n'),
+    de: [
+      '1. Wo findet der Vokalwechsel statt?',
+      'Bei starken Verben behalten ich, wir, ihr und sie/Sie den Vokal des Infinitivs. NUR bei du und er/sie/es ändert sich der Stammvokal.',
+      'Vergleiche: ich fahre, wir fahren, ihr fahrt, sie fahren – aber du fährst, er fährt.',
+      '',
+      '2. Die drei Hauptmuster auf A1-Niveau',
+      '• e → i (kurz): sprechen → du sprichst, er spricht; helfen → du hilfst, er hilft; geben → du gibst, er gibt; treffen → du triffst, er trifft.',
+      '• e → ie (lang): lesen → du liest, er liest; sehen → du siehst, er sieht; empfehlen → du empfiehlst, er empfiehlt.',
+      '• a → ä (und au → äu): fahren → du fährst, er fährt; schlafen → du schläfst, er schläft; tragen → du trägst, er trägt; laufen → du läufst, er läuft.',
+      '',
+      '3. Wichtige Besonderheiten auf A1-Niveau',
+      '• nehmen: Das h fällt weg und m wird verdoppelt bei du nimmst, er nimmt (aber: ich nehme, ihr nehmt).',
+      '• essen / vergessen / lesen: Bei Stämmen auf s/ss sind du und er/sie/es gleich (du isst = er isst; du liest = er liest).',
+      '• Verben mit Vokalwechsel und Stamm auf -t (halten, raten) bekommen kein Stütz-e: du hältst, er hält (NICHT *hältet!).',
+      '• wissen hat besondere Singularformen: ich weiß, du weißt, er/sie/es weiß, wir wissen, ihr wisst, sie/Sie wissen.',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-only-du-er',
+      title: 'Vokalwechsel nur bei du und er/sie/es',
+      body: 'ich, wir, ihr und sie/Sie behalten immer den Infinitivvokal (ich spreche, ihr sprecht – aber du sprichst, er spricht).',
+      title_i18n: {
+        en: 'Vowel shifts occur ONLY in du and er/sie/es',
+        fr: 'Le changement de voyelle ne touche QUE du et er/sie/es',
+        de: 'Vokalwechsel nur bei du und er/sie/es',
+      },
+      body_i18n: {
+        en: 'Never change the vowel in ich or ihr! Say ich spreche and ihr sprecht, NOT *ich spriche or *ihr sprichst.',
+        fr: 'Ne changez jamais la voyelle à ich ou à ihr : on dit ich spreche et ihr sprecht, jamais *ich spriche.',
+        de: 'Ändere den Vokal niemals bei ich oder ihr! Es heißt ich spreche und ihr sprecht.',
+      },
+    },
+    {
+      id: 'rule-three-shifts',
+      title: 'Drei Vokalwechsel: e → i, e → ie, a → ä (au → äu)',
+      body: 'sprechen → spricht, lesen → liest, fahren → fährt, laufen → läuft.',
+      title_i18n: {
+        en: 'Learn the vowel shift together with the infinitive',
+        fr: 'Apprendre l’alternance vocalique avec l’infinitif',
+        de: 'Den Vokalwechsel direkt mit dem Infinitiv mitlernen',
+      },
+      body_i18n: {
+        en: 'Not every verb with e or a changes its vowel (e.g., gehen → er geht; kaufen → er kauft). Learn each stem-changing verb with its 3rd-person singular form: sprechen (spricht), lesen (liest), fahren (fährt).',
+        fr: 'Tous les verbes en e ou a ne changent pas (ex. gehen → er geht ; kaufen → er kauft). Mémorisez chaque verbe fort avec sa 3e personne du singulier : sprechen (spricht), lesen (liest), fahren (fährt).',
+        de: 'Nicht jedes Verb mit e oder a wechselt den Vokal (z. B. gehen → er geht, kaufen → er kauft). Lerne Verben mit Vokalwechsel am besten direkt mit der er/sie/es-Form.',
+      },
+    },
+    {
+      id: 'rule-nehmen-wissen',
+      title: 'Sonderfälle: nehmen (nimmst/nimmt) und wissen (weiß)',
+      body: 'nehmen → du nimmst, er nimmt; wissen → ich/er weiß, du weißt, ihr wisst.',
+      title_i18n: {
+        en: 'Special irregular forms: nehmen, halten, and wissen',
+        fr: 'Cas particuliers : nehmen, halten et wissen',
+        de: 'Sonderformen: nehmen, halten und wissen',
+      },
+      body_i18n: {
+        en: 'Watch out for nehmen (nimmst, nimmt), halten (du hältst, er hält—no extra -e-!), einladen (du lädst ein, er lädt ein), and wissen (ich/er weiß, wir wissen, ihr wisst).',
+        fr: 'Attention à nehmen (nimmst, nimmt), halten (du hältst, er hält — sans -e- !), einladen (du lädst ein, er lädt ein) et wissen (ich/er weiß, wir wissen, ihr wisst).',
+        de: 'Beachte nehmen (nimmst, nimmt), halten (du hältst, er hält – ohne Stütz-e!), einladen (du lädst ein, er lädt ein) und wissen (ich/er weiß, wir wissen, ihr wisst).',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'table-stem-changing-verbs',
+      title_i18n: {
+        en: 'Common A1 Stem-Changing Verbs in the Present Tense',
+        fr: 'Verbes fréquents à changement de voyelle au présent (A1)',
+        de: 'Häufige A1-Verben mit Vokalwechsel im Präsens',
+      },
+      columns_i18n: {
+        en: ['Pattern', 'Infinitive', 'ich', 'du', 'er / sie / es', 'ihr'],
+        fr: ['Schéma', 'Infinitif', 'ich', 'du', 'er / sie / es', 'ihr'],
+        de: ['Wechsel', 'Infinitiv', 'ich', 'du', 'er / sie / es', 'ihr'],
+      },
+      rows: [
+        ['e → i', 'sprechen', 'spreche', 'sprichst', 'spricht', 'sprecht'],
+        ['e → i', 'nehmen', 'nehme', 'nimmst', 'nimmt', 'nehmt'],
+        ['e → i', 'essen', 'esse', 'isst', 'isst', 'esst'],
+        ['e → ie', 'lesen', 'lese', 'liest', 'liest', 'lest'],
+        ['e → ie', 'sehen', 'sehe', 'siehst', 'sieht', 'seht'],
+        ['a → ä', 'fahren', 'fahre', 'fährst', 'fährt', 'fahrt'],
+        ['a → ä', 'schlafen', 'schlafe', 'schläfst', 'schläft', 'schlaft'],
+        ['au → äu', 'laufen', 'laufe', 'läufst', 'läuft', 'lauft'],
+        ['special', 'wissen', 'weiß', 'weißt', 'weiß', 'wisst'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Sprichst du schon ein bisschen Deutsch?',
+      highlight: 'Sprichst',
+      note: 'e → i shift in du sprichst',
+      translation_i18n: {
+        en: 'Do you already speak a little German?',
+        fr: 'Parles-tu déjà un peu allemand ?',
+        de: 'Sprichst du schon ein bisschen Deutsch?',
+      },
+      explanation_i18n: {
+        en: 'sprechen shifts e → i in the du-form (Sprichst).',
+        fr: 'sprechen change e → i à la 2e personne du singulier (Sprichst).',
+        de: 'sprechen wechselt bei du von e zu i (Sprichst).',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Mein Vater fährt jeden Morgen mit dem Bus zur Arbeit.',
+      highlight: 'fährt',
+      note: 'a → ä shift in 3rd person singular',
+      translation_i18n: {
+        en: 'My father takes the bus to work every morning.',
+        fr: 'Mon père va au travail en bus chaque matin.',
+        de: 'Mein Vater fährt jeden Morgen mit dem Bus zur Arbeit.',
+      },
+      explanation_i18n: {
+        en: 'fahren shifts a → ä for Mein Vater (= er): fährt.',
+        fr: 'fahren prend l’Umlaut ä à la 3e personne du singulier : fährt.',
+        de: 'fahren wechselt bei er/sie/es von a zu ä: fährt.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Was liest du gerade, und warum schläfst du noch nicht?',
+      highlight: 'liest / schläfst',
+      note: 'e → ie in lesen (du liest), a → ä in schlafen (du schläfst)',
+      translation_i18n: {
+        en: 'What are you reading right now, and why aren’t you sleeping yet?',
+        fr: 'Qu’est-ce que tu lis en ce moment, et pourquoi ne dors-tu pas encore ?',
+        de: 'Was liest du gerade, und warum schläfst du noch nicht?',
+      },
+      explanation_i18n: {
+        en: 'Shows two different vowel shifts with du: liest (no extra s) and schläfst.',
+        fr: 'Montre deux changements vocaliques à du : liest (sans second s) et schläfst.',
+        de: 'Zeigt e → ie (liest) und a → ä (schläfst) in der du-Form.',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Ich nehme einen Tee, und meine Freundin nimmt einen Kaffee.',
+      highlight: 'nehme / nimmt',
+      note: 'Contrasts ich nehme with er/sie/es nimmt',
+      translation_i18n: {
+        en: 'I’ll take a tea, and my friend is taking a coffee.',
+        fr: 'Je prends un thé, et mon amie prend un café.',
+        de: 'Ich nehme einen Tee, und meine Freundin nimmt einen Kaffee.',
+      },
+      explanation_i18n: {
+        en: 'Demonstrates that ich keeps nehme, while meine Freundin (= sie) uses nimmt (no h, double m).',
+        fr: 'Montre que ich garde nehme alors que meine Freundin (= sie) prend nimmt (sans h, avec mm).',
+        de: 'Zeigt ich nehme gegenüber sie nimmt (ohne h, mit doppeltem m).',
+      },
+    },
+    {
+      id: 'ex-5',
+      sentence: 'Fahrt ihr am Wochenende an die Ostsee?',
+      highlight: 'Fahrt',
+      note: 'ihr-form keeps the original vowel a (no Umlaut)',
+      translation_i18n: {
+        en: 'Are you (all) going to the Baltic Sea on the weekend?',
+        fr: 'Allez-vous à la mer Baltique ce week-end ?',
+        de: 'Fahrt ihr am Wochenende an die Ostsee?',
+      },
+      explanation_i18n: {
+        en: 'In the 2nd person plural (ihr), fahren does NOT take an umlaut: fahrt.',
+        fr: 'À la 2e personne du pluriel (ihr), fahren ne prend pas d’Umlaut : fahrt.',
+        de: 'Bei ihr gibt es keinen Vokalwechsel: Fahrt (nicht *Fährt).',
+      },
+    },
+    {
+      id: 'ex-6',
+      sentence: 'Weißt du, wann der Zug abfährt?',
+      highlight: 'Weißt / abfährt',
+      note: 'Irregular wissen (du weißt) + a → ä in abfahren',
+      translation_i18n: {
+        en: 'Do you know when the train departs?',
+        fr: 'Sais-tu quand part le train ?',
+        de: 'Weißt du, wann der Zug abfährt?',
+      },
+      explanation_i18n: {
+        en: 'Combines du weißt (from wissen) with a → ä in der Zug fährt ab.',
+        fr: 'Combine du weißt (de wissen) avec le changement a → ä dans abfährt.',
+        de: 'Verbindet du weißt (wissen) mit dem Vokalwechsel in abfährt.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-not-all-verbs-shift',
+      contrast_pair: 'kaufen → er kauft  vs.  laufen → er läuft',
+      title_i18n: {
+        en: 'Not every verb with a, au, or e changes its vowel',
+        fr: 'Tous les verbes en a, au ou e ne changent pas de voyelle',
+        de: 'Nicht jedes Verb mit a, au oder e hat einen Vokalwechsel',
+      },
+      body_i18n: {
+        en: 'Compare regular kaufen (du kaufst, er kauft) and gehen (du gehst, er geht) with stem-changing laufen (du läufst, er läuft) and sehen (du siehst, er sieht). Check whether a verb is strong or weak when you learn it.',
+        fr: 'Comparez kaufen (du kaufst, er kauft) et gehen (du gehst, er geht), qui sont réguliers, à laufen (du läufst, er läuft) et sehen (du siehst, er sieht).',
+        de: 'Vergleiche regelmäßiges kaufen (er kauft) und gehen (er geht) mit starkem laufen (er läuft) und sehen (er sieht).',
+      },
+    },
+    {
+      id: 'contrast-wissen-vs-kennen',
+      contrast_pair: 'wissen (fact/clause)  vs.  kennen (person/place/thing)',
+      title_i18n: {
+        en: 'Brief note: wissen vs. kennen',
+        fr: 'Remarque utile : wissen vs kennen',
+        de: 'Kurzer Vergleich: wissen vs. kennen',
+      },
+      body_i18n: {
+        en: 'wissen is irregular (ich weiß, er weiß) and is used for facts or questions ("Ich weiß das nicht", "Weißt du, wo er wohnt?"). kennen is regular (ich kenne, er kennt) and means to be acquainted with a person, city, or book ("Ich kenne Berlin").',
+        fr: 'wissen (irrégulier : ich/er weiß) porte sur un fait ou une information (« Ich weiß das »). kennen (régulier : ich kenne, er kennt) signifie connaître une personne, un lieu ou une œuvre (« Ich kenne Berlin »).',
+        de: 'wissen (ich/er weiß) steht für Fakten oder Nebensätze („Ich weiß das“). kennen (regelmäßig: er kennt) steht bei Personen, Orten oder Dingen („Ich kenne Berlin“).',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Ich spriche Deutsch und Englisch.',
+      right: 'Ich spreche Deutsch und Englisch.',
+      explanation_i18n: {
+        en: 'The e → i vowel shift applies only to du and er/sie/es, never to ich.',
+        fr: 'Le passage e → i ne concerne que du et er/sie/es, jamais ich.',
+        de: 'Der Vokalwechsel e → i gilt nur für du und er/sie/es, nicht für ich.',
+      },
+      principle_i18n: {
+        en: 'Keep the infinitive vowel for ich, wir, ihr, and sie/Sie.',
+        fr: 'Gardez la voyelle de l’infinitif à ich, wir, ihr et sie/Sie.',
+        de: 'Behalte bei ich, wir, ihr und sie/Sie den Stammvokal des Infinitivs.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Er nehmt die U-Bahn.',
+      right: 'Er nimmt die U-Bahn.',
+      explanation_i18n: {
+        en: 'nehmen is stem-changing: in 3rd person singular it drops the h, doubles the m, and changes e to i (nimmt).',
+        fr: 'nehmen change de radical à la 3e personne du singulier : il perd le h, double le m et prend i (nimmt).',
+        de: 'nehmen wechselt bei du und er/sie/es zu nimmst / nimmt (mit i und mm, ohne h).',
+      },
+      principle_i18n: {
+        en: 'Use nimmst (du) and nimmt (er/sie/es) for nehmen.',
+        fr: 'Utilisez nimmst (du) et nimmt (er/sie/es) pour nehmen.',
+        de: 'Merke dir für nehmen: du nimmst, er/sie/es nimmt.',
+      },
+    },
+    {
+      id: 'cm-3',
+      wrong: 'Ihr fährt morgen nach München.',
+      right: 'Ihr fahrt morgen nach München.',
+      explanation_i18n: {
+        en: 'ihr does NOT take an umlaut in stem-changing verbs; only du and er/sie/es take ä.',
+        fr: 'ihr ne prend pas d’Umlaut ; seuls du et er/sie/es prennent ä.',
+        de: 'ihr bekommt keinen Umlaut – nur du fährst und er/sie/es fährt.',
+      },
+      principle_i18n: {
+        en: 'Apply a → ä only to du and er/sie/es, never to ihr.',
+        fr: 'N’appliquez a → ä qu’à du et er/sie/es, jamais à ihr.',
+        de: 'Kein Vokalwechsel in der 2. Person Plural (ihr).',
+      },
+    },
+    {
+      id: 'cm-4',
+      wrong: 'Der Bus hältet hier nicht.',
+      right: 'Der Bus hält hier nicht.',
+      explanation_i18n: {
+        en: 'Stem-changing verbs ending in -t (halten, raten) do not add -et in er/sie/es: the stem vowel shifts and no extra ending is added.',
+        fr: 'Les verbes à changement vocalique terminés par -t (halten, raten) n’ajoutent pas -et à er/sie/es : er hält.',
+        de: 'Starke Verben auf -t wie halten bekommen bei er/sie/es kein -et, sondern heißen einfach hält.',
+      },
+      principle_i18n: {
+        en: 'Use er hält (not *hältet) and du hältst for halten.',
+        fr: 'Écrivez er hält (et non *hältet) pour halten.',
+        de: 'Verben wie halten lauten in der 3. Person Singular hält (ohne -et).',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'Stem-changing verbs shift e → i, e → ie, or a → ä (au → äu) ONLY in du and er/sie/es.',
+      key_pattern: 'ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren; nehmen → nimmst/nimmt; wissen → ich/er weiß.',
+      mistake_warning: 'Never change the vowel in ich or ihr, and watch out for irregular nehme/nimmt and hält.',
+      self_check: 'Fill in the blanks: "Ich ___ (lesen) ein Buch, aber er ___ (lesen) die Zeitung und du ___ (nehmen) das Magazin."',
+    },
+    fr: {
+      central_rule: 'Les verbes à changement vocalique passent de e → i, e → ie ou a → ä (au → äu) UNIQUEMENT à du et er/sie/es.',
+      key_pattern: 'ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren ; nehmen → nimmst/nimmt ; wissen → ich/er weiß.',
+      mistake_warning: 'Ne modifiez jamais la voyelle à ich ou ihr, et retenez les formes nehmen → nimmt et halten → hält.',
+      self_check: 'Complétez : « Ich ___ (lesen) ein Buch, aber er ___ (lesen) die Zeitung und du ___ (nehmen) das Magazin. »',
+    },
+    de: {
+      central_rule: 'Starke Verben wechseln den Stammvokal (e → i, e → ie, a → ä, au → äu) NUR bei du und er/sie/es.',
+      key_pattern: 'ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren; nehmen → nimmst/nimmt; wissen → ich/er weiß.',
+      mistake_warning: 'Ändere den Vokal nie bei ich oder ihr und achte auf nimmt (ohne h) sowie hält (ohne -et).',
+      self_check: 'Ergänze: „Ich ___ (lesen) ein Buch, aber er ___ (lesen) die Zeitung und du ___ (nehmen) das Magazin.“',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-06-vowel-shift-patterns',
+      label_i18n: {
+        en: 'Applying e → i, e → ie, and a → ä / au → äu in du and er/sie/es',
+        fr: 'Application des alternances e → i, e → ie et a → ä / au → äu à du et er/sie/es',
+        de: 'Vokalwechsel e → i, e → ie und a → ä / au → äu bei du und er/sie/es',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'matching'],
+    },
+    {
+      id: 'a1-06-no-shift-persons',
+      label_i18n: {
+        en: 'Keeping the infinitive vowel in ich, wir, ihr, and sie/Sie',
+        fr: 'Maintien de la voyelle de base à ich, wir, ihr et sie/Sie',
+        de: 'Infinitivvokal bei ich, wir, ihr und sie/Sie beibehalten',
+      },
+      formats: ['error_correction', 'true_false', 'gap_fill'],
+    },
+    {
+      id: 'a1-06-special-irregulars',
+      label_i18n: {
+        en: 'Conjugating special A1 irregulars: nehmen, essen, halten, and wissen',
+        fr: 'Conjugaison des cas particuliers : nehmen, essen, halten et wissen',
+        de: 'Sonderformen konjugieren: nehmen, essen, halten und wissen',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'error_correction'],
+    },
+  ],
+};

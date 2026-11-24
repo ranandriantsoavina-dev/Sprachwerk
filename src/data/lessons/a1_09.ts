@@ -1,0 +1,320 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_09: Lesson = {
+  id: 'a1-09',
+  level: 'A1',
+  unit: 9,
+  title_en: 'Indefinite articles: ein, eine',
+  title_de: 'Unbestimmte Artikel',
+  topic: 'Indefinite articles: ein, eine',
+  hasContent: true,
+  tags: ['artikel', 'unbestimmte-artikel', 'ein-eine', 'nominativ', 'nullartikel'],
+  estimated_study_minutes: 10,
+  prerequisite_knowledge_i18n: {
+    en: 'Helpful to know definite articles (Lesson A1-08).',
+    fr: 'Utile de connaître les articles définis (leçon A1-08).',
+    de: 'Hilfreich sind die bestimmten Artikel (Lektion A1-08).',
+  },
+  objectives: {
+    en: 'Use ein and eine accurately in the nominative case, recognize that indefinite nouns have no article in the plural, and know when articles are omitted altogether.',
+    fr: 'Employer correctement ein et eine au nominatif, savoir qu’il n’y a pas d’article indéfini au pluriel, et identifier les cas d’omission de l’article.',
+    de: 'ein und eine im Nominativ sicher verwenden, die artikellose Pluralform beachten und typische Fälle ohne Artikel erkennen.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Use ein for masculine and neuter singular nouns and eine for feminine singular nouns in the nominative case.',
+      'Explain why German has no indefinite plural article ("Das sind Äpfel", not *"eine Äpfel").',
+      'Contrast ein/eine with its negative form kein/keine and know when professions/uncountables drop the article.',
+    ],
+    fr: [
+      'Utiliser ein pour le masculin et le neutre singuliers, et eine pour le féminin singulier au nominatif.',
+      'Expliquer l’absence d’article indéfini au pluriel (« Das sind Äpfel », et non *« eine Äpfel »).',
+      'Opposer ein/eine à la négation kein/keine et repérer l’absence d’article devant les professions ou matières.',
+    ],
+    de: [
+      'ein für Maskulinum und Neutrum Singular sowie eine für Femininum Singular im Nominativ richtig wählen.',
+      'Wissen, dass es im Plural keinen unbestimmten Artikel gibt („Das sind Äpfel“).',
+      'ein/eine mit der Negation kein/keine vergleichen und Berufe/Stoffnamen ohne Artikel erkennen.',
+    ],
+  },
+  introduction_i18n: {
+    en: 'To introduce someone or something new, non-specific, or countable for the first time ("a table", "an apple", "a lamp"), German uses the indefinite articles ein and eine. Unlike French (un/une/des), German has no plural indefinite article—and drops the article completely before professions after sein.',
+    fr: 'Pour présenter une personne ou une chose nouvelle ou non précise (« un / une »), l’allemand utilise les articles indéfinis ein et eine. Contrairement au français qui possède « des », l’allemand n’a pas d’article indéfini au pluriel et omet également l’article devant un métier après sein.',
+    de: 'Um eine Person oder Sache neu oder unbestimmt einzuführen, verwendet man im Deutschen die unbestimmten Artikel ein und eine. Anders als im Singular gibt es im Plural keinen unbestimmten Artikel – und auch vor Berufen nach sein lässt man den Artikel weg.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Forms of the indefinite article (Nominative)',
+      '• Masculine singular (der): ein (ein Tisch, ein Mann, ein Apfel)',
+      '• Feminine singular (die): eine (eine Lampe, eine Frau, eine Tasche)',
+      '• Neuter singular (das): ein (ein Buch, ein Kind, ein Haus)',
+      '• Plural: NO indefinite article (— Tische, — Lampen, — Bücher)!',
+      'Notice that masculine and neuter are identical (ein) in the nominative.',
+      '',
+      '2. When to use ein / eine vs. no article',
+      '• Use ein/eine for one unspecified or newly introduced countable item: "Das ist ein Stuhl." / "Dort steht eine Frau."',
+      '• Use NO article for indefinite plurals: "Das sind Stühle." / "Ich kaufe Äpfel."',
+      '• Use NO article for uncountable substances in general statements: "Hier ist Kaffee." / "Ich trinke Wasser."',
+      '• Use NO article for standalone professions/nationalities after sein or werden: "Er ist Lehrer." / "Sie ist Französin."',
+      '',
+      '3. Preview of kein/keine and Akkusativ',
+      'To negate an indefinite noun, put k- in front of ein/eine: kein / keine. Unlike ein, kein DOES exist in the plural: keine Bücher! In the accusative case (Lesson A1-13), masculine ein becomes einen.',
+    ].join('\n'),
+    fr: [
+      '1. Les formes de l’article indéfini (Nominatif)',
+      '• Masculin singulier (der) : ein (ein Tisch, ein Mann, ein Apfel)',
+      '• Féminin singulier (die) : eine (eine Lampe, eine Frau, eine Tasche)',
+      '• Neutre singulier (das) : ein (ein Buch, ein Kind, ein Haus)',
+      '• Pluriel : AUCUN article indéfini (— Tische, — Lampen, — Bücher) !',
+      'Remarquez que le masculin et le neutre sont identiques (ein) au nominatif.',
+      '',
+      '2. Quand utiliser ein/eine ou aucun article ?',
+      '• Employez ein/eine pour un élément dénombrable non précisé ou mentionné pour la première fois : « Das ist ein Stuhl. »',
+      '• N’utilisez AUCUN article au pluriel indéfini : « Das sind Stühle. » (jamais de « des » !).',
+      '• N’utilisez AUCUN article devant les matières ou liquides pris de façon générale : « Ich trinke Wasser. »',
+      '• N’utilisez AUCUN article devant un métier ou une nationalité seuls après sein/werden : « Er ist Lehrer. »',
+      '',
+      '3. Lien avec kein/keine et l’accusatif',
+      'Pour nier un nom avec ein/eine ou sans article, on emploie kein / keine (qui existe, lui, au pluriel : keine Bücher !). À l’accusatif (leçon A1-13), ein masculin devient einen.',
+    ].join('\n'),
+    de: [
+      '1. Die Formen des unbestimmten Artikels im Nominativ',
+      '• Maskulinum Singular (der): ein (ein Tisch, ein Mann, ein Apfel)',
+      '• Femininum Singular (die): eine (eine Lampe, eine Frau, eine Tasche)',
+      '• Neutrum Singular (das): ein (ein Buch, ein Kind, ein Haus)',
+      '• Plural: KEIN unbestimmter Artikel (— Tische, — Lampen, — Bücher)!',
+      'Maskulinum und Neutrum lauten im Nominativ gleich: ein.',
+      '',
+      '2. Wann steht ein/eine und wann kein Artikel (Nullartikel)?',
+      '• ein/eine steht für etwas Einzelnes, Unbekanntes oder zum ersten Mal Genanntes: „Das ist ein Stuhl.“',
+      '• Im unbestimmten Plural steht KEIN Artikel: „Das sind Stühle.“',
+      '• Bei Stoffen und Flüssigkeiten im Allgemeinen steht meist KEIN Artikel: „Ich trinke Wasser.“',
+      '• Bei Berufen und Nationalitäten ohne Adjektiv nach sein/werden steht KEIN Artikel: „Er ist Lehrer.“',
+      '',
+      '3. Ausblick auf kein/keine und den Akkusativ',
+      'Die Verneinung von ein/eine und Nullartikel ist kein/keine – und die gibt es auch im Plural: keine Bücher! Im Akkusativ (Lektion A1-13) wird maskulines ein zu einen.',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-ein-eine-nom',
+      title: 'Nominativ: ein (m./n.), eine (f.), kein Artikel im Plural',
+      body: 'der → ein, das → ein, die (Sg.) → eine, Plural → — (ohne Artikel).',
+      title_i18n: {
+        en: 'ein for masculine & neuter, eine for feminine, no article in plural',
+        fr: 'ein (m./n.), eine (f.), aucun article au pluriel',
+        de: 'ein (m./n.), eine (f.), Nullartikel im Plural',
+      },
+      body_i18n: {
+        en: 'Use ein before both der- and das-nouns in the nominative, eine before die-nouns (singular), and leave plural indefinite nouns bare.',
+        fr: 'Mettez ein devant les noms en der et das, eine devant les noms en die (singulier), et rien devant le pluriel indéfini.',
+        de: 'Vor maskulinen und neutralen Nomen steht ein, vor femininen Nomen eine, und im unbestimmten Plural steht kein Artikel.',
+      },
+    },
+    {
+      id: 'rule-zero-article',
+      title: 'Nullartikel bei Berufen, Nationalitäten und Stoffen',
+      body: 'Sie ist Ärztin. Wir sind Spanier. Auf dem Tisch steht Wasser.',
+      title_i18n: {
+        en: 'Zero article before professions, nationalities, and uncountable nouns',
+        fr: 'Article zéro devant les métiers, nationalités et indénombrables',
+        de: 'Kein Artikel vor Berufen, Nationalitäten und Stoffnamen',
+      },
+      body_i18n: {
+        en: 'Say "Sie ist Ingenieurin" and "Das ist Kaffee" without ein/eine.',
+        fr: 'On dit « Sie ist Ingenieurin » et « Das ist Kaffee » sans ein/eine.',
+        de: 'Bei Berufen („Sie ist Ingenieurin“) und Stoffen („Das ist Kaffee“) steht kein ein/eine.',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'table-indefinite-articles',
+      title_i18n: {
+        en: 'Definite vs. Indefinite Articles (Nominative)',
+        fr: 'Articles définis vs indéfinis (Nominatif)',
+        de: 'Bestimmte und unbestimmte Artikel im Nominativ',
+      },
+      columns_i18n: {
+        en: ['Gender / Number', 'Definite', 'Indefinite', 'Negative (preview)', 'Example'],
+        fr: ['Genre / Nombre', 'Défini', 'Indéfini', 'Négation (aperçu)', 'Exemple'],
+        de: ['Genus / Numerus', 'Bestimmt', 'Unbestimmt', 'Negativ (Vorschau)', 'Beispiel'],
+      },
+      rows: [
+        ['Masculine (Sg.)', 'der', 'ein', 'kein', 'Hier steht ein Stuhl.'],
+        ['Feminine (Sg.)', 'die', 'eine', 'keine', 'Dort hängt eine Uhr.'],
+        ['Neuter (Sg.)', 'das', 'ein', 'kein', 'Das ist ein Wörterbuch.'],
+        ['Plural (all)', 'die', '— (none)', 'keine', 'Das sind (—) Bücher.'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Dort steht ein Tisch, und auf dem Tisch liegt eine Zeitung.',
+      highlight: 'ein / eine',
+      note: 'Masculine ein Tisch vs. feminine eine Zeitung',
+      translation_i18n: {
+        en: 'A table is standing over there, and a newspaper is lying on the table.',
+        fr: 'Là-bas se trouve une table, et sur la table est posé un journal.',
+        de: 'Dort steht ein Tisch, und auf dem Tisch liegt eine Zeitung.',
+      },
+      explanation_i18n: {
+        en: 'First introduces both items with ein (masculine) and eine (feminine); note the second reference to the table uses dem (definite).',
+        fr: 'Introduit deux éléments nouveaux avec ein (masculin) et eine (féminin).',
+        de: 'Führt ein Tisch (maskulin) und eine Zeitung (feminin) als neue Dinge ein.',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Das ist ein Fahrrad, und das sind Fahrräder.',
+      highlight: 'ein / —',
+      note: 'Singular ein vs. zero article in plural',
+      translation_i18n: {
+        en: 'This is a bicycle, and those are bicycles.',
+        fr: 'C’est un vélo, et ce sont des vélos.',
+        de: 'Das ist ein Fahrrad, und das sind Fahrräder.',
+      },
+      explanation_i18n: {
+        en: 'Shows ein for neuter singular (das Fahrrad) and no article for plural (Fahrräder).',
+        fr: 'Illustre ein au singulier (das Fahrrad) et l’absence d’article au pluriel (Fahrräder).',
+        de: 'Zeigt ein im Singular und den Nullartikel im Plural.',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Mein Onkel ist Architekt, und meine Tante ist eine bekannte Ärztin.',
+      highlight: 'Architekt / eine bekannte Ärztin',
+      note: 'Standalone profession (no article) vs. profession + adjective (with eine)',
+      translation_i18n: {
+        en: 'My uncle is an architect, and my aunt is a well-known doctor.',
+        fr: 'Mon oncle est architecte, et ma tante est une médecin connue.',
+        de: 'Mein Onkel ist Architekt, und meine Tante ist eine bekannte Ärztin.',
+      },
+      explanation_i18n: {
+        en: 'Drops the article before Architekt alone, but uses eine before bekannte Ärztin because an adjective is added.',
+        fr: 'Omet l’article devant Architekt seul, mais l’ajoute devant bekannte Ärztin en raison de l’adjectif.',
+        de: 'Ohne Adjektiv steht kein Artikel (Architekt), mit Adjektiv steht eine (eine bekannte Ärztin).',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Ist das ein Apfel? – Ja, der Apfel ist sehr süß.',
+      highlight: 'ein Apfel / der Apfel',
+      note: 'Indefinite on first mention → definite on second mention',
+      translation_i18n: {
+        en: 'Is that an apple? – Yes, the apple is very sweet.',
+        fr: 'Est-ce que c’est une pomme ? – Oui, la pomme est très sucrée.',
+        de: 'Ist das ein Apfel? – Ja, der Apfel ist sehr süß.',
+      },
+      explanation_i18n: {
+        en: 'Moves naturally from indefinite ein Apfel in the question to definite der Apfel in the reply.',
+        fr: 'Passe naturellement de l’indéfini ein Apfel à la forme définie der Apfel.',
+        de: 'Wechselt von unbestimmt (ein Apfel) zu bestimmt (der Apfel).',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-no-plural-ein',
+      contrast_pair: 'fr. des livres  →  de. Bücher (no article)',
+      title_i18n: {
+        en: 'Why *"eine Bücher" is impossible',
+        fr: 'Pourquoi il n’y a pas d’équivalent de « des » devant un pluriel',
+        de: 'Kein unbestimmter Artikel im Plural',
+      },
+      body_i18n: {
+        en: 'Because ein literally comes from "one" (eins), it cannot be used with plural nouns. Simply omit the article ("Hier liegen Bücher") or use words like viele, einige, or zwei.',
+        fr: 'L’article ein vient du nombre « un » (eins) : il ne peut pas s’employer au pluriel. On laisse le nom sans article (« Hier liegen Bücher ») ou on emploie viele / zwei.',
+        de: 'Da ein vom Zahlwort eins kommt, gibt es keinen unbestimmten Artikel im Plural: Man lässt den Artikel weg („Hier liegen Bücher“) oder nutzt Zahlwörter/viele.',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Das ist eine Buch.',
+      right: 'Das ist ein Buch.',
+      explanation_i18n: {
+        en: 'Buch is neuter (das Buch), so it takes ein, not eine (which is only for feminine singular).',
+        fr: 'Buch est neutre (das Buch) : il prend donc ein et non eine (réservé au féminin singulier).',
+        de: 'Buch ist neutral (das Buch) und verlangt ein statt eine.',
+      },
+      principle_i18n: {
+        en: 'Use ein for both masculine and neuter singular nouns.',
+        fr: 'Utilisez ein pour le masculin comme pour le neutre singulier.',
+        de: 'Bei Maskulinum und Neutrum Singular steht im Nominativ immer ein.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Das sind eine Äpfel.',
+      right: 'Das sind Äpfel.',
+      explanation_i18n: {
+        en: 'German has no indefinite article in the plural; never use eine with a plural noun.',
+        fr: 'Il n’existe pas d’article indéfini au pluriel en allemand ; ne mettez jamais eine devant un pluriel.',
+        de: 'Im Plural gibt es keinen unbestimmten Artikel; eine steht nur im Femininum Singular.',
+      },
+      principle_i18n: {
+        en: 'Omit the indefinite article before plural nouns.',
+        fr: 'Supprimez l’article indéfini devant un nom au pluriel.',
+        de: 'Lass den unbestimmten Artikel im Plural weg.',
+      },
+    },
+    {
+      id: 'cm-3',
+      wrong: 'Er ist ein Lehrer.',
+      right: 'Er ist Lehrer.',
+      explanation_i18n: {
+        en: 'While grammatically understood, standard German omits ein/eine before standalone professions after sein.',
+        fr: 'En allemand courant, on n’utilise pas ein/eine devant un métier seul après sein.',
+        de: 'Vor Berufen ohne Adjektiv nach sein lässt man ein/eine im Deutschen weg.',
+      },
+      principle_i18n: {
+        en: 'Drop ein/eine before standalone professions and nationalities after sein.',
+        fr: 'Omettez ein/eine devant les professions et nationalités seules après sein.',
+        de: 'Berufe ohne Adjektiv stehen nach sein ohne Artikel.',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'Nominative indefinite articles are ein (masculine & neuter) and eine (feminine), with NO indefinite article in the plural.',
+      key_pattern: 'der/das → ein | die (sg.) → eine | plural → — | profession after sein → —.',
+      mistake_warning: 'Never write *eine + plural noun, and remember that das-nouns take ein (not eine).',
+      self_check: 'Insert ein, eine, or — (nothing): "Das ist ___ (das) Haus, dort steht ___ (die) Lampe, und hier sind ___ Stühle."',
+    },
+    fr: {
+      central_rule: 'Les articles indéfinis au nominatif sont ein (masculin et neutre) et eine (féminin), sans article au pluriel.',
+      key_pattern: 'der/das → ein | die (sg.) → eine | pluriel → — | métier seul après sein → —.',
+      mistake_warning: 'Ne mettez jamais *eine devant un pluriel et n’oubliez pas que das prend ein.',
+      self_check: 'Complétez avec ein, eine ou — : « Das ist ___ (das) Haus, dort steht ___ (die) Lampe, und hier sind ___ Stühle. »',
+    },
+    de: {
+      central_rule: 'Im Nominativ lauten die unbestimmten Artikel ein (Maskulinum und Neutrum) und eine (Femininum); im Plural steht kein Artikel.',
+      key_pattern: 'der/das → ein | die (Sg.) → eine | Plural → — | Beruf allein nach sein → —.',
+      mistake_warning: 'Verwende nie *eine vor einem Plural-Nomen und nimm für das-Nomen ein (nicht eine).',
+      self_check: 'Ergänze ein, eine oder —: „Das ist ___ Haus, dort steht ___ Lampe, und hier sind ___ Stühle.“',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-09-ein-eine-choice',
+      label_i18n: {
+        en: 'Choosing ein, eine, or zero article in the nominative case',
+        fr: 'Choix entre ein, eine et article zéro au nominatif',
+        de: 'Wahl zwischen ein, eine und Nullartikel im Nominativ',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'error_correction'],
+    },
+    {
+      id: 'a1-09-definite-vs-indefinite',
+      label_i18n: {
+        en: 'Contrasting definite (der/die/das) and indefinite (ein/eine/—) contexts',
+        fr: 'Contraste entre articles définis et indéfinis en contexte',
+        de: 'Unterscheidung von bestimmtem und unbestimmtem Artikel im Kontext',
+      },
+      formats: ['gap_fill', 'true_false', 'translation'],
+    },
+  ],
+};

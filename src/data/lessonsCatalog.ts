@@ -1,4 +1,34 @@
 import type { Lesson } from '../types/domain';
+import { LESSON_A1_01 } from './lessons/a1_01';
+import { LESSON_A1_02 } from './lessons/a1_02';
+import { LESSON_A1_03 } from './lessons/a1_03';
+import { LESSON_A1_04 } from './lessons/a1_04';
+import { LESSON_A1_05 } from './lessons/a1_05';
+import { LESSON_A1_06 } from './lessons/a1_06';
+import { LESSON_A1_07 } from './lessons/a1_07';
+import { LESSON_A1_08 } from './lessons/a1_08';
+import { LESSON_A1_09 } from './lessons/a1_09';
+import { LESSON_A1_10 } from './lessons/a1_10';
+import { LESSON_A1_11 } from './lessons/a1_11';
+import { LESSON_A1_12 } from './lessons/a1_12';
+import { LESSON_A1_13 } from './lessons/a1_13';
+import { LESSON_A1_14 } from './lessons/a1_14';
+import { LESSON_A1_15 } from './lessons/a1_15';
+import { LESSON_A1_16 } from './lessons/a1_16';
+import { LESSON_A1_17 } from './lessons/a1_17';
+import { LESSON_A1_18 } from './lessons/a1_18';
+import { LESSON_A1_19 } from './lessons/a1_19';
+import { LESSON_A1_20 } from './lessons/a1_20';
+import { LESSON_A1_21 } from './lessons/a1_21';
+import { LESSON_A1_22 } from './lessons/a1_22';
+import { LESSON_A1_23 } from './lessons/a1_23';
+import { LESSON_A1_24 } from './lessons/a1_24';
+import { LESSON_A1_25 } from './lessons/a1_25';
+import { LESSON_A1_26 } from './lessons/a1_26';
+import { LESSON_A1_27 } from './lessons/a1_27';
+import { LESSON_A1_28 } from './lessons/a1_28';
+import { LESSON_A1_29 } from './lessons/a1_29';
+import { LESSON_A1_30 } from './lessons/a1_30';
 
 export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -48,21 +78,65 @@ export function formatLessonNumber(unit: number): string {
 
 type RawLessonSeed = readonly [unit: number, title_en: string, title_de: string];
 
+const AUTHORED_A1_LESSONS: Lesson[] = [
+  LESSON_A1_01,
+  LESSON_A1_02,
+  LESSON_A1_03,
+  LESSON_A1_04,
+  LESSON_A1_05,
+  LESSON_A1_06,
+  LESSON_A1_07,
+  LESSON_A1_08,
+  LESSON_A1_09,
+  LESSON_A1_10,
+  LESSON_A1_11,
+  LESSON_A1_12,
+  LESSON_A1_13,
+  LESSON_A1_14,
+  LESSON_A1_15,
+  LESSON_A1_16,
+  LESSON_A1_17,
+  LESSON_A1_18,
+  LESSON_A1_19,
+  LESSON_A1_20,
+  LESSON_A1_21,
+  LESSON_A1_22,
+  LESSON_A1_23,
+  LESSON_A1_24,
+  LESSON_A1_25,
+  LESSON_A1_26,
+  LESSON_A1_27,
+  LESSON_A1_28,
+  LESSON_A1_29,
+  LESSON_A1_30,
+];
+
+const AUTHORED_LESSONS_BY_ID: Record<string, Lesson> = Object.fromEntries(
+  AUTHORED_A1_LESSONS.map((lesson) => [lesson.id, lesson])
+);
+
 function buildLevelLessons(level: CefrLevel, seeds: readonly RawLessonSeed[]): Lesson[] {
-  return seeds.map(([unit, title_en, title_de]) => ({
-    id: `${level.toLowerCase()}-${formatLessonNumber(unit)}`,
-    level,
-    unit,
-    title_en,
-    title_de,
-    topic: title_en,
-    hasContent: false,
-    objectives: {},
-    explanation_i18n: {},
-    rules: [],
-    examples_de: [],
-    common_mistakes: [],
-  }));
+  return seeds.map(([unit, title_en, title_de]) => {
+    const id = `${level.toLowerCase()}-${formatLessonNumber(unit)}`;
+    const authored = AUTHORED_LESSONS_BY_ID[id];
+    if (authored) {
+      return authored;
+    }
+    return {
+      id,
+      level,
+      unit,
+      title_en,
+      title_de,
+      topic: title_en,
+      hasContent: false,
+      objectives: {},
+      explanation_i18n: {},
+      rules: [],
+      examples_de: [],
+      common_mistakes: [],
+    };
+  });
 }
 
 const A1_LESSONS: readonly RawLessonSeed[] = [

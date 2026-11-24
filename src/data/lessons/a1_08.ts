@@ -1,0 +1,335 @@
+import type { Lesson } from '../../types/domain';
+
+export const LESSON_A1_08: Lesson = {
+  id: 'a1-08',
+  level: 'A1',
+  unit: 8,
+  title_en: 'Definite articles: der, die, das',
+  title_de: 'Bestimmte Artikel',
+  topic: 'Definite articles: der, die, das',
+  hasContent: true,
+  tags: ['artikel', 'bestimmte-artikel', 'der-die-das', 'nominativ'],
+  estimated_study_minutes: 10,
+  prerequisite_knowledge_i18n: {
+    en: 'None required. Connects directly to Lesson A1-09 (Indefinite articles) and Lesson A1-10 (Noun gender).',
+    fr: 'Aucun prérequis. En lien direct avec les leçons A1-09 (Articles indéfinis) et A1-10 (Genre des noms).',
+    de: 'Keine Vorkenntnisse nötig. Steht in direktem Zusammenhang mit Lektion A1-09 (Unbestimmte Artikel) und A1-10 (Genus).',
+  },
+  objectives: {
+    en: 'Use the nominative definite articles der, die, das, and plural die accurately, and know when definite articles are preferred over indefinite articles.',
+    fr: 'Employer correctement les articles définis au nominatif (der, die, das et die au pluriel) et savoir quand choisir un article défini.',
+    de: 'Die bestimmten Artikel im Nominativ (der, die, das und Plural die) sicher verwenden und ihren Gebrauch von unbestimmten Artikeln unterscheiden.',
+  },
+  learning_objectives_i18n: {
+    en: [
+      'Match der (masculine), die (feminine), das (neuter), and die (all plurals) in the nominative case.',
+      'Explain when to use a definite article: specific, already known, or unique things (e.g., die Sonne).',
+      'Avoid dropping definite articles before seasons, months, or specific concrete nouns where German requires them.',
+    ],
+    fr: [
+      'Associer der (masculin), die (féminin), das (neutre) et die (tout pluriel) au nominatif.',
+      'Savoir quand employer l’article défini : référent précis, déjà connu ou unique (ex. die Sonne).',
+      'Éviter d’omettre l’article défini devant les saisons, mois ou noms concrets précis lorsqu’il est requis en allemand.',
+    ],
+    de: [
+      'der (Maskulinum), die (Femininum), das (Neutrum) und die (Plural) im Nominativ richtig zuordnen.',
+      'Erklären, wann der bestimmte Artikel steht: bei bekannten, konkreten oder einzigartigen Dingen (z. B. die Sonne).',
+      'Typische Auslassungsfehler beim bestimmten Artikel (z. B. bei Jahreszeiten oder konkreten Subjekten) vermeiden.',
+    ],
+  },
+  introduction_i18n: {
+    en: 'Where English uses a single word "the", German uses three singular definite articles—der, die, and das—depending on the noun’s grammatical gender, plus die for every plural noun. Whenever you learn a German noun, learning its definite article right alongside it is the fastest way to build accurate grammar.',
+    fr: 'Là où le français emploie le/la/les (et l’anglais « the »), l’allemand utilise trois articles définis au singulier — der, die, das — selon le genre grammatical du nom, ainsi que die pour tout nom au pluriel. Apprendre chaque nom allemand avec son article défini est le meilleur réflexe dès le niveau A1.',
+    de: 'Im Deutschen gibt es drei bestimmte Artikel im Singular – der, die und das – je nach dem grammatischen Geschlecht des Nomens, sowie die für alle Nomen im Plural. Wer jedes neue Nomen direkt zusammen mit seinem bestimmten Artikel lernt, vermeidet später viele Fehler bei Fällen und Pronomen.',
+  },
+  explanation_i18n: {
+    en: [
+      '1. Forms of the definite article (Nominative)',
+      '• Masculine singular: der (der Tisch, der Kaffee, der Mann)',
+      '• Feminine singular: die (die Lampe, die Straße, die Frau)',
+      '• Neuter singular: das (das Buch, das Haus, das Kind)',
+      '• Plural (all genders): die (die Tische, die Lampen, die Bücher)',
+      'Notice that die is used for BOTH feminine singular and all plurals. Check the noun form and the verb ending to tell them apart ("Die Lampe ist neu" vs. "Die Lampen sind neu").',
+      '',
+      '2. When do we use der, die, das?',
+      'Use the definite article when the person or thing is:',
+      '• Specific or identified in the situation: "Wo ist der Schlüssel?" (the key we are looking for).',
+      '• Already mentioned earlier: "Ich habe ein Buch. Das Buch ist interessant."',
+      '• Unique or universally known: "Die Sonne scheint." / "Der Himmel ist blau."',
+      '• A day, month, or season (as a noun): "Der Sommer ist warm." / "Der Montag ist stressig."',
+      '',
+      '3. Case preview',
+      'This lesson focuses on the nominative (subject) forms der, die, das, die. Later in A1 (Lesson A1-13), you will see that only masculine der changes to den in the accusative case.',
+    ].join('\n'),
+    fr: [
+      '1. Les formes de l’article défini (Nominatif)',
+      '• Masculin singulier : der (der Tisch, der Kaffee, der Mann)',
+      '• Féminin singulier : die (die Lampe, die Straße, die Frau)',
+      '• Neutre singulier : das (das Buch, das Haus, das Kind)',
+      '• Pluriel (tous genres) : die (die Tische, die Lampen, die Bücher)',
+      'Remarquez que die sert à la fois pour le féminin singulier et pour tout le pluriel : on les distingue grâce à la forme du nom et au verbe (« Die Lampe ist neu » vs « Die Lampen sind neu »).',
+      '',
+      '2. Quand emploie-t-on l’article défini ?',
+      '• Pour un élément précis ou identifiable dans la situation : « Wo ist der Schlüssel ? » (la clé en question).',
+      '• Pour un nom déjà mentionné auparavant : « Ich habe ein Buch. Das Buch ist interessant. »',
+      '• Pour une réalité unique : « Die Sonne scheint. » / « Der Himmel ist blau. »',
+      '• Devant les jours, mois ou saisons employés comme noms : « Der Sommer ist warm. »',
+      '',
+      '3. Aperçu des cas',
+      'Cette leçon présente les formes du nominatif (sujet). En leçon A1-13 (Akkusativ), vous verrez que seul der masculin singulier change pour devenir den.',
+    ].join('\n'),
+    de: [
+      '1. Die Formen des bestimmten Artikels im Nominativ',
+      '• Maskulinum Singular: der (der Tisch, der Kaffee, der Mann)',
+      '• Femininum Singular: die (die Lampe, die Straße, die Frau)',
+      '• Neutrum Singular: das (das Buch, das Haus, das Kind)',
+      '• Plural (alle Genera): die (die Tische, die Lampen, die Bücher)',
+      'Beachte: die steht sowohl für den Femininum Singular als auch für den Plural aller Geschlechter. Der Unterschied zeigt sich am Nomen und am Verb („Die Lampe ist neu“ vs. „Die Lampen sind neu“).',
+      '',
+      '2. Wann verwendet man den bestimmten Artikel?',
+      '• Wenn etwas bekannt, konkret oder in der Situation eindeutig ist: „Wo ist der Schlüssel?“',
+      '• Wenn etwas schon genannt wurde: „Ich habe ein Buch. Das Buch ist interessant.“',
+      '• Bei einzigartigen Dingen: „Die Sonne scheint.“ / „Der Mond ist hell.“',
+      '• Bei Jahreszeiten, Monaten und Wochentagen als Subjekt: „Der Sommer ist warm.“',
+      '',
+      '3. Ausblick auf den Akkusativ',
+      'Hier übst du die Formen im Nominativ. In Lektion A1-13 siehst du, dass sich im Akkusativ nur der zu den verändert.',
+    ].join('\n'),
+  },
+  rules: [
+    {
+      id: 'rule-def-articles-nom',
+      title: 'Bestimmte Artikel im Nominativ: der, die, das, die',
+      body: 'Maskulinum: der, Femininum: die, Neutrum: das, Plural: die.',
+      title_i18n: {
+        en: 'Always learn nouns together with der, die, or das',
+        fr: 'Toujours mémoriser le nom avec der, die ou das',
+        de: 'Nomen immer zusammen mit der, die oder das lernen',
+      },
+      body_i18n: {
+        en: 'Because noun gender is often unpredictable from meaning, always memorize "der Tisch", "die Tür", "das Fenster"—not just "Tisch, Tür, Fenster".',
+        fr: 'Comme le genre grammatical ne suit pas toujours le sens, apprenez toujours « der Tisch », « die Tür », « das Fenster » avec leur article.',
+        de: 'Da man das Genus nicht immer an der Bedeutung erkennt, lerne Nomen immer mit Artikel: der Tisch, die Tür, das Fenster.',
+      },
+    },
+    {
+      id: 'rule-def-second-mention',
+      title: 'Erste Nennung (ein/eine) → Zweite Nennung (der/die/das)',
+      body: 'Bei der ersten Erwähnung steht oft ein/eine, danach der/die/das: Dort steht ein Stuhl. Der Stuhl ist frei.',
+      title_i18n: {
+        en: 'New information (ein/eine) becomes known (der/die/das)',
+        fr: 'Information nouvelle (ein/eine) puis connue (der/die/das)',
+        de: 'Neu (ein/eine) wird bekannt (der/die/das)',
+      },
+      body_i18n: {
+        en: 'Introduce a noun with ein/eine, then refer back to it with der/die/das: "Das ist eine Tasche. Die Tasche ist sehr praktisch."',
+        fr: 'Introduisez un nom avec ein/eine, puis reprenez-le avec der/die/das : « Das ist eine Tasche. Die Tasche ist sehr praktisch. »',
+        de: 'Führe etwas neu mit ein/eine ein und greife es danach mit der/die/das auf: „Das ist eine Tasche. Die Tasche ist sehr praktisch.“',
+      },
+    },
+  ],
+  tables: [
+    {
+      id: 'table-definite-articles',
+      title_i18n: {
+        en: 'Definite Articles in the Nominative Case',
+        fr: 'Articles définis au nominatif',
+        de: 'Bestimmte Artikel im Nominativ',
+      },
+      columns_i18n: {
+        en: ['Gender / Number', 'Definite Article', 'Examples', 'Subject Sentence'],
+        fr: ['Genre / Nombre', 'Article défini', 'Exemples', 'Phrase sujet'],
+        de: ['Genus / Numerus', 'Bestimmter Artikel', 'Beispiele', 'Beispielsatz'],
+      },
+      rows: [
+        ['Masculine (Sg.)', 'der', 'der Mann, der Zug, der Apfel', 'Der Zug kommt um acht Uhr.'],
+        ['Feminine (Sg.)', 'die', 'die Frau, die Straße, die Milch', 'Die Straße ist ruhig.'],
+        ['Neuter (Sg.)', 'das', 'das Kind, das Auto, das Brot', 'Das Brot ist noch warm.'],
+        ['Plural (all)', 'die', 'die Züge, die Straßen, die Kinder', 'Die Kinder spielen draußen.'],
+      ],
+    },
+  ],
+  examples_de: [
+    {
+      id: 'ex-1',
+      sentence: 'Der Kaffee ist heiß, aber die Milch ist kalt.',
+      highlight: 'Der / die',
+      note: 'Masculine der Kaffee vs. feminine die Milch',
+      translation_i18n: {
+        en: 'The coffee is hot, but the milk is cold.',
+        fr: 'Le café est chaud, mais le lait est froid.',
+        de: 'Der Kaffee ist heiß, aber die Milch ist kalt.',
+      },
+      explanation_i18n: {
+        en: 'Notice that Milch is feminine in German (die Milch), even though "milk" is masculine in French.',
+        fr: 'Attention : Milch est féminin en allemand (die Milch), contrairement au français « le lait ».',
+        de: 'Kaffee ist maskulin (der Kaffee), Milch ist feminin (die Milch).',
+      },
+    },
+    {
+      id: 'ex-2',
+      sentence: 'Das Museum liegt direkt am Marktplatz.',
+      highlight: 'Das',
+      note: 'Neuter das Museum',
+      translation_i18n: {
+        en: 'The museum is located right on the market square.',
+        fr: 'Le musée se trouve directement sur la place du marché.',
+        de: 'Das Museum liegt direkt am Marktplatz.',
+      },
+      explanation_i18n: {
+        en: 'Nouns ending in -um such as Museum are neuter (das Museum).',
+        fr: 'Les noms en -um comme Museum sont neutres (das Museum).',
+        de: 'Nomen auf -um sind neutral (das Museum).',
+      },
+    },
+    {
+      id: 'ex-3',
+      sentence: 'Die Schüler und die Lehrerin sind schon im Klassenzimmer.',
+      highlight: 'Die / die',
+      note: 'Plural die Schüler vs. feminine singular die Lehrerin',
+      translation_i18n: {
+        en: 'The students and the (female) teacher are already in the classroom.',
+        fr: 'Les élèves et la professeure sont déjà dans la salle de classe.',
+        de: 'Die Schüler und die Lehrerin sind schon im Klassenzimmer.',
+      },
+      explanation_i18n: {
+        en: 'Shows die for both plural (die Schüler) and feminine singular (die Lehrerin).',
+        fr: 'Montre die pour le pluriel (die Schüler) et pour le féminin singulier (die Lehrerin).',
+        de: 'Zeigt die sowohl im Plural (die Schüler) als auch im Femininum Singular (die Lehrerin).',
+      },
+    },
+    {
+      id: 'ex-4',
+      sentence: 'Heute scheint die Sonne und der Himmel ist blau.',
+      highlight: 'die Sonne / der Himmel',
+      note: 'Unique things always take a definite article',
+      translation_i18n: {
+        en: 'Today the sun is shining and the sky is blue.',
+        fr: 'Aujourd’hui le soleil brille et le ciel est bleu.',
+        de: 'Heute scheint die Sonne und der Himmel ist blau.',
+      },
+      explanation_i18n: {
+        en: 'Unique objects like die Sonne and der Himmel take the definite article (note: die Sonne is feminine, der Mond is masculine).',
+        fr: 'Les éléments uniques prennent l’article défini (notez : die Sonne est féminin en allemand).',
+        de: 'Einzigartige Dinge wie die Sonne oder der Himmel stehen mit bestimmtem Artikel.',
+      },
+    },
+  ],
+  usage_and_contrasts: [
+    {
+      id: 'contrast-die-sg-vs-pl',
+      contrast_pair: 'Die Blume blüht.  vs.  Die Blumen blühen.',
+      title_i18n: {
+        en: 'How to tell feminine die from plural die',
+        fr: 'Distinguer die (féminin singulier) de die (pluriel)',
+        de: 'die (Femininum Singular) vs. die (Plural) erkennen',
+      },
+      body_i18n: {
+        en: 'Both look identical as die, so look at two clues: the noun ending (Blume vs. Blumen) and the verb ending (blüht = singular vs. blühen = plural).',
+        fr: 'L’article die étant identique, observez le nom (Blume vs Blumen) et la terminaison du verbe (blüht = singulier vs blühen = pluriel).',
+        de: 'Da der Artikel gleich aussieht, helfen Nomen-Endung (Blume vs. Blumen) und Verbform (blüht vs. blühen).',
+      },
+    },
+    {
+      id: 'contrast-gender-differs-l1',
+      contrast_pair: 'die Sonne (f.) / der Mond (m.) / das Mädchen (n.)',
+      title_i18n: {
+        en: 'German gender does not match French or natural gender',
+        fr: 'Le genre allemand ne correspond pas toujours au français',
+        de: 'Grammatisches Geschlecht vs. natürliches Geschlecht',
+      },
+      body_i18n: {
+        en: 'Do not guess German articles from French or Spanish! For instance, in German it is die Sonne (f.), der Mond (m.), die Milch (f.), das Auto (n.), and das Mädchen (n.).',
+        fr: 'Ne calquez pas le genre français : en allemand, on dit die Sonne (le soleil), der Mond (la lune), die Milch (le lait), das Auto (la voiture).',
+        de: 'Das grammatische Geschlecht folgt den Regeln des Deutschen: die Sonne, der Mond, die Milch, das Auto, das Mädchen.',
+      },
+    },
+  ],
+  common_mistakes: [
+    {
+      id: 'cm-1',
+      wrong: 'Der Sonne scheint heute sehr hell.',
+      right: 'Die Sonne scheint heute sehr hell.',
+      explanation_i18n: {
+        en: 'Sonne is grammatically feminine in German, so it takes die, not der.',
+        fr: 'Sonne est féminin en allemand (die Sonne) et non masculin.',
+        de: 'Sonne ist feminin und braucht den Artikel die.',
+      },
+      principle_i18n: {
+        en: 'Always verify the German article rather than transferring gender from another language.',
+        fr: 'Vérifiez toujours l’article allemand sans calquer celui d’une autre langue.',
+        de: 'Übernimm niemals das Geschlecht aus einer anderen Sprache.',
+      },
+    },
+    {
+      id: 'cm-2',
+      wrong: 'Die Kinder spielt im Park.',
+      right: 'Die Kinder spielen im Park.',
+      explanation_i18n: {
+        en: 'Die Kinder is plural, so the verb must be plural (spielen), not singular (spielt).',
+        fr: 'Die Kinder est au pluriel : le verbe doit être au pluriel (spielen).',
+        de: 'Die Kinder ist Plural und verlangt die Verbform spielen.',
+      },
+      principle_i18n: {
+        en: 'When die is paired with a plural noun, conjugate the verb in the 3rd person plural (-en).',
+        fr: 'Quand die accompagne un nom pluriel, mettez le verbe au pluriel (-en).',
+        de: 'Steht die mit einem Plural-Nomen, endet das Verb auf -en.',
+      },
+    },
+    {
+      id: 'cm-3',
+      wrong: 'Das Männer warten draußen.',
+      right: 'Die Männer warten draußen.',
+      explanation_i18n: {
+        en: 'In the plural, every German noun takes die—never der or das.',
+        fr: 'Au pluriel, tous les noms allemands prennent die, jamais der ni das.',
+        de: 'Im Plural heißt der bestimmte Artikel für alle Nomen die.',
+      },
+      principle_i18n: {
+        en: 'Use die for all plural nouns regardless of their singular gender.',
+        fr: 'Utilisez toujours die au pluriel, quel que soit le genre au singulier.',
+        de: 'Im Plural gibt es nur einen bestimmten Artikel: die.',
+      },
+    },
+  ],
+  quick_review_i18n: {
+    en: {
+      central_rule: 'Nominative definite articles are der (m.), die (f.), das (n.), and die (all plurals).',
+      key_pattern: 'Use definite articles for specific, previously mentioned, or unique things; always learn each noun with its article.',
+      mistake_warning: 'Never assume gender matches French/Spanish (die Sonne, die Milch, das Auto), and always use die in the plural.',
+      self_check: 'Insert der, die, or das: "___ (das) Kind liest, ___ (die) Mutter kocht, und ___ (die) Bücher liegen dort."',
+    },
+    fr: {
+      central_rule: 'Les articles définis au nominatif sont der (m.), die (f.), das (n.) et die (tous pluriels).',
+      key_pattern: 'Employez l’article défini pour un nom précis, déjà mentionné ou unique ; mémorisez chaque nom avec son article.',
+      mistake_warning: 'Ne transférez pas le genre du français (die Sonne, die Milch, das Auto) et utilisez toujours die au pluriel.',
+      self_check: 'Complétez avec der, die ou das : « ___ (das) Kind liest, ___ (die) Mutter kocht, und ___ (die) Bücher liegen dort. »',
+    },
+    de: {
+      central_rule: 'Die bestimmten Artikel im Nominativ sind der (m.), die (f.), das (n.) und die (alle Pluralformen).',
+      key_pattern: 'Der bestimmte Artikel steht bei bekannten, konkreten oder einzigartigen Nomen; lerne jedes Nomen direkt mit Artikel.',
+      mistake_warning: 'Im Plural steht immer die (nie der oder das), und bei die + Plural steht das Verb auf -en.',
+      self_check: 'Ergänze der, die oder das: „___ Kind liest, ___ Mutter kocht, und ___ Bücher liegen dort.“',
+    },
+  },
+  practice_mapping: [
+    {
+      id: 'a1-08-article-gender-match',
+      label_i18n: {
+        en: 'Matching der, die, das, and plural die to common A1 nouns',
+        fr: 'Association de der, die, das et die (pluriel) aux noms A1 courants',
+        de: 'Zuordnung von der, die, das und Plural die zu A1-Nomen',
+      },
+      formats: ['multiple_choice', 'gap_fill', 'matching'],
+    },
+    {
+      id: 'a1-08-die-sg-vs-pl',
+      label_i18n: {
+        en: 'Distinguishing feminine singular die from plural die via noun and verb endings',
+        fr: 'Distinction entre die (féminin singulier) et die (pluriel)',
+        de: 'Unterscheidung von die (Fem. Sg.) und die (Plural) über Nomen und Verb',
+      },
+      formats: ['true_false', 'error_correction', 'multiple_choice'],
+    },
+  ],
+};

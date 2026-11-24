@@ -4,6 +4,14 @@ import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { ApiError, apiRequest } from '../lib/api';
 import type { GamificationConfig, RegistrationCodeAudit } from '../types/domain';
+import {
+  ResponsiveTable,
+  ResponsiveTableBody,
+  ResponsiveTableCell,
+  ResponsiveTableHead,
+  ResponsiveTableHeader,
+  ResponsiveTableRow,
+} from '../components/ResponsiveTable';
 
 interface GeneratedCode {
   id: string;
@@ -133,7 +141,7 @@ export const AdminView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <div>
         <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
           <ShieldCheck size={22} className="text-[#DD0000] shrink-0" />
@@ -280,89 +288,123 @@ export const AdminView: React.FC = () => {
       </form>
 
       {/* Code Audit Table */}
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden">
+      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden min-w-0">
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 text-sm font-display font-bold text-neutral-900 dark:text-white">
           {t(lang, 'codeAuditTitle')}
         </div>
         {codes.length === 0 ? (
           <div className="p-6 text-sm text-neutral-500">{t(lang, 'noCodesYet')}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50 dark:bg-neutral-900/70 text-neutral-500">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">{t(lang, 'colCodeHint')}</th>
-                  <th className="px-4 py-3 font-semibold">{t(lang, 'colLabel')}</th>
-                  <th className="px-4 py-3 font-semibold">{t(lang, 'colStatus')}</th>
-                  <th className="px-4 py-3 font-semibold">{t(lang, 'colRedeemedBy')}</th>
-                  <th className="px-4 py-3 font-semibold">{t(lang, 'colExpires')}</th>
-                  <th className="px-4 py-3 font-semibold text-right">{t(lang, 'colAction')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {codes.map((c) => (
-                  <tr key={c.id}>
-                    <td className="px-4 py-3 font-mono-tabular font-semibold text-neutral-900 dark:text-white whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5">
-                        <span>{c.code_hint}</span>
-                        {c.status === 'active' && c.full_code && (
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(c.full_code!, c.id)}
-                            className="inline-flex items-center justify-center p-1.5 rounded-lg text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
-                            title="Copy full code"
-                            aria-label="Copy full code"
-                          >
-                            {copiedCodeId === c.id ? (
-                              <Check size={14} className="text-emerald-600 dark:text-emerald-400" />
-                            ) : (
-                              <Copy size={14} />
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">{c.label || '—'}</td>
-                    <td className="px-4 py-3 uppercase font-semibold">
-                      <span
-                        className={
-                          c.status === 'active'
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : c.status === 'redeemed'
-                            ? 'text-neutral-500'
-                            : 'text-[#DD0000]'
-                        }
-                      >
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-                      {c.redeemed_by_username || '—'}
-                    </td>
-                    <td className="px-4 py-3 font-mono-tabular text-neutral-500 whitespace-nowrap">
-                      {c.expires_at
-                        ? new Date(c.expires_at).toLocaleDateString(
-                            lang === 'fr' ? 'fr-FR' : lang === 'de' ? 'de-DE' : 'en-US'
-                          )
-                        : t(lang, 'neverExpires')}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {c.status === 'active' && (
+          <ResponsiveTable
+            columnCount={6}
+            wrapperClassName="overflow-x-auto"
+            className="w-full text-left text-xs"
+          >
+            <ResponsiveTableHead className="bg-neutral-50 dark:bg-neutral-900/70 text-neutral-500">
+              <tr>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold">
+                  {t(lang, 'colCodeHint')}
+                </ResponsiveTableHeader>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold">
+                  {t(lang, 'colLabel')}
+                </ResponsiveTableHeader>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold">
+                  {t(lang, 'colStatus')}
+                </ResponsiveTableHeader>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold">
+                  {t(lang, 'colRedeemedBy')}
+                </ResponsiveTableHeader>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold">
+                  {t(lang, 'colExpires')}
+                </ResponsiveTableHeader>
+                <ResponsiveTableHeader scope="col" className="px-4 py-3 font-semibold text-right">
+                  {t(lang, 'colAction')}
+                </ResponsiveTableHeader>
+              </tr>
+            </ResponsiveTableHead>
+            <ResponsiveTableBody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {codes.map((c) => (
+                <ResponsiveTableRow key={c.id} className="">
+                  <ResponsiveTableCell
+                    label={t(lang, 'colCodeHint')}
+                    className="px-4 py-3 font-mono-tabular font-semibold text-neutral-900 dark:text-white whitespace-nowrap"
+                  >
+                    <div className="inline-flex items-center gap-1.5">
+                      <span>{c.code_hint}</span>
+                      {c.status === 'active' && c.full_code && (
                         <button
                           type="button"
-                          onClick={() => handleRevoke(c.id)}
-                          className="inline-flex items-center gap-1 text-[#DD0000] hover:underline font-semibold cursor-pointer"
+                          onClick={() => handleCopy(c.full_code!, c.id)}
+                          className="inline-flex items-center justify-center p-1.5 rounded-lg text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                          title="Copy full code"
+                          aria-label="Copy full code"
                         >
-                          <XCircle size={13} />
-                          <span>{t(lang, 'revokeBtn')}</span>
+                          {copiedCodeId === c.id ? (
+                            <Check size={14} className="text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </ResponsiveTableCell>
+                  <ResponsiveTableCell
+                    label={t(lang, 'colLabel')}
+                    className="px-4 py-3 text-neutral-600 dark:text-neutral-300"
+                  >
+                    {c.label || '—'}
+                  </ResponsiveTableCell>
+                  <ResponsiveTableCell
+                    label={t(lang, 'colStatus')}
+                    className="px-4 py-3 uppercase font-semibold"
+                  >
+                    <span
+                      className={
+                        c.status === 'active'
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : c.status === 'redeemed'
+                          ? 'text-neutral-500'
+                          : 'text-[#DD0000]'
+                      }
+                    >
+                      {c.status}
+                    </span>
+                  </ResponsiveTableCell>
+                  <ResponsiveTableCell
+                    label={t(lang, 'colRedeemedBy')}
+                    className="px-4 py-3 text-neutral-600 dark:text-neutral-300"
+                  >
+                    {c.redeemed_by_username || '—'}
+                  </ResponsiveTableCell>
+                  <ResponsiveTableCell
+                    label={t(lang, 'colExpires')}
+                    className="px-4 py-3 font-mono-tabular text-neutral-500 whitespace-nowrap"
+                  >
+                    {c.expires_at
+                      ? new Date(c.expires_at).toLocaleDateString(
+                          lang === 'fr' ? 'fr-FR' : lang === 'de' ? 'de-DE' : 'en-US'
+                        )
+                      : t(lang, 'neverExpires')}
+                  </ResponsiveTableCell>
+                  <ResponsiveTableCell
+                    label={t(lang, 'colAction')}
+                    className="px-4 py-3 text-right whitespace-nowrap"
+                  >
+                    {c.status === 'active' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRevoke(c.id)}
+                        className="inline-flex items-center gap-1 text-[#DD0000] hover:underline font-semibold cursor-pointer"
+                      >
+                        <XCircle size={13} />
+                        <span>{t(lang, 'revokeBtn')}</span>
+                      </button>
+                    )}
+                  </ResponsiveTableCell>
+                </ResponsiveTableRow>
+              ))}
+            </ResponsiveTableBody>
+          </ResponsiveTable>
         )}
       </div>
     </div>

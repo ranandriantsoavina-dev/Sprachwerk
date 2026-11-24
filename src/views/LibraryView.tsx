@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ArrowLeft,
   Bookmark,
   BookmarkCheck,
-  CheckCircle2,
-  Dumbbell,
-  Layers,
   Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -13,9 +9,11 @@ import { LESSONS_CATALOG, LEVEL_STRUCTURE, formatLessonNumber } from '../data/le
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
 import type { Lesson } from '../types/domain';
+import { LessonDetailView } from '../components/lesson/LessonDetailView';
 
 export const LibraryView: React.FC = () => {
   const {
+    user,
     lang,
     setScreen,
     setSelectedLessonIdForPractice,
@@ -41,6 +39,9 @@ export const LibraryView: React.FC = () => {
         const found = items.find((l) => l.id === selectedLessonIdForDetail);
         if (found) setActiveLesson(found);
         setSelectedLessonIdForDetail(null);
+      } else if (activeLesson) {
+        const synced = items.find((l) => l.id === activeLesson.id);
+        if (synced) setActiveLesson(synced);
       }
     } catch {
       setLessons(LESSONS_CATALOG);
@@ -99,221 +100,25 @@ export const LibraryView: React.FC = () => {
   };
 
   if (activeLesson) {
-    const levelMeta = LEVEL_STRUCTURE.find((s) => s.level === activeLesson.level);
-
-    // Placeholder view when lesson content is not yet populated
-    if (!activeLesson.hasContent) {
-      return (
-        <div className="max-w-3xl space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveLesson(null)}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer min-h-[40px]"
-            >
-              <ArrowLeft size={16} />
-              <span>{t(lang, 'backToLibraryBtn')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleBookmark(activeLesson)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-medium cursor-pointer min-h-[40px]"
-            >
-              {activeLesson.progress?.bookmarked ? (
-                <BookmarkCheck size={15} className="text-[#DD0000]" />
-              ) : (
-                <Bookmark size={15} />
-              )}
-              <span>{t(lang, 'bookmarkBtn')}</span>
-            </button>
-          </div>
-
-          <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 space-y-6">
-            <header className="border-b border-neutral-200 dark:border-neutral-800 pb-5">
-              <div className="text-xs font-mono-tabular font-semibold text-neutral-500 dark:text-neutral-400 mb-2">
-                {levelMeta ? levelMeta.title : activeLesson.level} · #{formatLessonNumber(activeLesson.unit)}
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white">
-                {activeLesson.title_de}
-              </h2>
-            </header>
-
-            <div className="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-6 sm:p-8 text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#DD0000]/10 text-[#DD0000] dark:text-[#FFCE00] mb-1">
-                <Layers size={20} />
-              </div>
-              <p className="text-base font-display font-semibold text-neutral-900 dark:text-white">
-                Lesson content coming soon
-              </p>
-            </div>
-          </article>
-        </div>
-      );
-    }
-
-    const hasLangExp = Boolean(activeLesson.explanation_i18n[lang]);
-    const explanationText =
-      activeLesson.explanation_i18n[lang] ||
-      activeLesson.explanation_i18n.en ||
-      activeLesson.explanation_i18n.de ||
-      activeLesson.explanation_i18n.fr ||
-      '';
-    const fallbackLang = hasLangExp
-      ? null
-      : activeLesson.explanation_i18n.en
-      ? 'English'
-      : activeLesson.explanation_i18n.de
-      ? 'Deutsch'
-      : 'Français';
-
     return (
-      <div className="max-w-4xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveLesson(null)}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer"
-          >
-            <ArrowLeft size={16} />
-            <span>{t(lang, 'backToLibraryBtn')}</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => toggleBookmark(activeLesson)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs font-medium cursor-pointer"
-            >
-              {activeLesson.progress?.bookmarked ? <BookmarkCheck size={15} className="text-[#DD0000]" /> : <Bookmark size={15} />}
-              <span>{t(lang, 'bookmarkBtn')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedLessonIdForPractice(activeLesson.id);
-                setScreen('lesson_practice');
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer"
-            >
-              <Dumbbell size={14} />
-              <span>{t(lang, 'practiceLessonBtn')}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 1. Lesson Header (canonical German title preserved) */}
-        <article className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 space-y-8">
-          <header className="border-b border-neutral-200 dark:border-neutral-800 pb-5">
-            <div className="text-xs font-mono-tabular text-neutral-500 mb-2">
-              {activeLesson.level} · #{formatLessonNumber(activeLesson.unit)} · {activeLesson.topic}
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white">
-              {activeLesson.title_de}
-            </h2>
-            {activeLesson.objectives?.[lang] && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-2">
-                {activeLesson.objectives[lang]}
-              </p>
-            )}
-          </header>
-
-          {/* 2. Explanation */}
-          <section className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-                {t(lang, 'explanationHeading')}
-              </h3>
-              {fallbackLang && (
-                <span className="text-xs text-neutral-500">
-                  {t(lang, 'fallbackShownIn')} {fallbackLang} ({t(lang, 'defaultAuthoredNote')})
-                </span>
-              )}
-            </div>
-            <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
-              {explanationText}
-            </p>
-          </section>
-
-          {/* 3. Form and rules */}
-          {activeLesson.rules.length > 0 && (
-            <section className="space-y-3">
-              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-                {t(lang, 'formAndRulesHeading')}
-              </h3>
-              <div className="space-y-2">
-                {activeLesson.rules.map((r, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800">
-                    <div className="text-sm font-semibold text-neutral-900 dark:text-white">{r.title}</div>
-                    <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">{r.body}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 4. German examples */}
-          {activeLesson.examples_de.length > 0 && (
-            <section className="space-y-3">
-              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-                {t(lang, 'germanExamplesHeading')}
-              </h3>
-              <ul className="space-y-2">
-                {activeLesson.examples_de.map((ex, i) => (
-                  <li key={i} className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-sm">
-                    <span className="font-medium text-neutral-900 dark:text-white">{ex.sentence}</span>
-                    {ex.note && <span className="block text-xs text-neutral-500 mt-1">{ex.note}</span>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* 5. Common mistakes */}
-          {activeLesson.common_mistakes.length > 0 && (
-            <section className="space-y-3">
-              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-                {t(lang, 'commonMistakesHeading')}
-              </h3>
-              <div className="space-y-2">
-                {activeLesson.common_mistakes.map((m, i) => (
-                  <div key={i} className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 text-sm space-y-1">
-                    <div className="text-[#DD0000]">{t(lang, 'incorrectLabel')}: {m.wrong}</div>
-                    <div className="text-emerald-700 dark:text-emerald-400">{t(lang, 'correctLabel')}: {m.right}</div>
-                    <div className="text-neutral-600 dark:text-neutral-400">
-                      {m.explanation_i18n[lang] || m.explanation_i18n.en || ''}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 6 & 7. Mark Reviewed / Practice */}
-          <footer className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => markLessonComplete(activeLesson)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-sm font-semibold cursor-pointer min-h-[44px]"
-            >
-              <CheckCircle2 size={16} />
-              <span>{t(lang, 'markLessonReviewedBtn')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedLessonIdForPractice(activeLesson.id);
-                setScreen('lesson_practice');
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DD0000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
-            >
-              <Dumbbell size={16} />
-              <span>{t(lang, 'practiceThisLessonBtn')}</span>
-            </button>
-          </footer>
-        </article>
-      </div>
+      <LessonDetailView
+        lesson={activeLesson}
+        allLessons={lessons}
+        lang={lang}
+        reducedMotion={Boolean(user?.reducedMotion)}
+        onBackToLibrary={() => setActiveLesson(null)}
+        onFilterLevel={(lvl) => {
+          setLevelFilter(lvl);
+          setActiveLesson(null);
+        }}
+        onSelectLesson={(nextLesson) => setActiveLesson(nextLesson)}
+        onToggleBookmark={toggleBookmark}
+        onMarkReviewed={markLessonComplete}
+        onPracticeLesson={(lessonId) => {
+          setSelectedLessonIdForPractice(lessonId);
+          setScreen('lesson_practice');
+        }}
+      />
     );
   }
 
@@ -459,6 +264,16 @@ export const LibraryView: React.FC = () => {
                           </span>
                           <span aria-hidden="true">·</span>
                           <span>{lesson.level}</span>
+                          <span aria-hidden="true">·</span>
+                          {lesson.hasContent ? (
+                            <span className="font-sans font-semibold text-emerald-700 dark:text-emerald-400">
+                              {t(lang, 'lessonAvailableLabel')}
+                            </span>
+                          ) : (
+                            <span className="font-sans font-semibold text-[#DD0000] dark:text-red-400">
+                              {t(lang, 'lessonComingSoonLabel')}
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm sm:text-base font-display font-bold text-neutral-900 dark:text-white break-words leading-snug">
                           {lesson.title_de}
