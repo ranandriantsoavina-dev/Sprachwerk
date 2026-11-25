@@ -642,40 +642,6 @@ export const ShopView: React.FC = () => {
         </>
       )}
 
-      {/* Wallet Ledger */}
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6">
-        <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white mb-4">
-          {t(lang, 'walletHistory')}
-        </h3>
-        {!data || data.transactions.length === 0 ? (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t(lang, 'noCoinTransactions')}</p>
-        ) : (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {data.transactions.map((tx) => (
-              <div key={tx.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div>
-                  <span className="font-medium text-neutral-900 dark:text-white">
-                    {tx.reason.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-neutral-500 ml-2 font-mono-tabular">
-                    {new Date(tx.created_at).toLocaleString(
-                      lang === 'fr' ? 'fr-FR' : lang === 'de' ? 'de-DE' : 'en-US'
-                    )}
-                  </span>
-                </div>
-                <span
-                  className={`font-mono-tabular font-semibold ${
-                    tx.amount >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-[#DD0000]'
-                  }`}
-                >
-                  {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Item Detail & Live Preview Modal / Bottom Sheet */}
       <MotionModal
         open={Boolean(selectedItem)}

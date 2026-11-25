@@ -1377,7 +1377,7 @@ export const FlashcardEnginePanel: React.FC<{ onBack: () => void }> = ({ onBack 
       await syncOfflineQueue();
       await refreshUser();
     } else {
-      pushToast('Flashcard rating saved offline for sync.', 'info');
+      pushToast(t(lang, 'queuedOfflineMsg'), 'info');
     }
 
     setRevealed(false);

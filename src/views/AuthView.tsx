@@ -840,30 +840,30 @@ export const AuthView: React.FC = () => {
       </div>
 
       {/* Mobile-Only Bottom Info Footer */}
-      <footer className="lg:hidden border-t border-neutral-200 bg-white px-6 py-6 sm:px-10">
+      <footer className="lg:hidden border-t border-neutral-800 bg-[#0A0B0E] text-white px-6 py-7 sm:px-10">
         <div className="max-w-md mx-auto space-y-4">
           <div className="space-y-2.5 text-sm">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-neutral-500">{t(lang, 'heroScopeLabel')}</span>
-              <span className="font-mono-tabular font-medium text-neutral-900 text-right">
+              <span className="text-neutral-400">{t(lang, 'heroScopeLabel')}</span>
+              <span className="font-mono-tabular font-medium text-white text-right">
                 {t(lang, 'heroScopeValue')}
               </span>
             </div>
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-neutral-500">{t(lang, 'heroModesLabel')}</span>
-              <span className="font-mono-tabular font-medium text-neutral-900 text-right">
+              <span className="text-neutral-400">{t(lang, 'heroModesLabel')}</span>
+              <span className="font-mono-tabular font-medium text-white text-right">
                 {t(lang, 'heroModesValue')}
               </span>
             </div>
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-neutral-500">{t(lang, 'heroLangsLabel')}</span>
-              <span className="font-mono-tabular font-medium text-neutral-900 text-right">
+              <span className="text-neutral-400">{t(lang, 'heroLangsLabel')}</span>
+              <span className="font-mono-tabular font-medium text-white text-right">
                 {t(lang, 'heroLangsValue')}
               </span>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-neutral-100 text-xs text-neutral-500">
+          <div className="pt-3 border-t border-neutral-800 text-xs text-neutral-500">
             {t(lang, 'heroFooterInvite')}
           </div>
         </div>

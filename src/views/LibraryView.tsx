@@ -213,7 +213,7 @@ export const LibraryView: React.FC = () => {
 
           {/* Filters Bar */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 max-w-full">
+            <div className="inline-flex items-center flex-nowrap overflow-x-auto no-scrollbar gap-0.5 sm:gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 max-w-full">
               {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => {
                 const active = levelFilter === lvl;
                 return (
@@ -221,7 +221,7 @@ export const LibraryView: React.FC = () => {
                     key={lvl}
                     type="button"
                     onClick={() => setLevelFilter(lvl)}
-                    className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                    className={`relative shrink-0 whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                       active
                         ? 'text-neutral-900 dark:text-white'
                         : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'

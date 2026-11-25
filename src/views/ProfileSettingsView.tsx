@@ -5,11 +5,8 @@ import {
   BarChart3,
   Check,
   Coins,
-  Download,
-  GraduationCap,
   KeyRound,
   LogOut,
-  Monitor,
   Pencil,
   Plus,
   Settings,
@@ -50,15 +47,6 @@ import type { AchievementItem, InterfaceLang, ShopItem, ThemeMode } from '../typ
 
 type CustomizeCategory = 'avatars' | 'frames' | 'banners' | 'badges' | 'themes';
 
-interface SessionRow {
-  id: string;
-  user_agent: string;
-  ip_prefix: string;
-  created_at: string;
-  last_seen_at: string;
-  isCurrent: boolean;
-}
-
 export const ProfileSettingsView: React.FC = () => {
   const { user, lang, setLangLocal, theme, setThemeLocal, refreshUser, setUser, signOut, pushToast, setScreen } = useApp();
   const reducedMotion = useMotionPreference();
@@ -73,9 +61,9 @@ export const ProfileSettingsView: React.FC = () => {
 
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [inventory, setInventory] = useState<ShopItem[]>([]);
-  const [sessions, setSessions] = useState<SessionRow[]>([]);
 
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [customizeTab, setCustomizeTab] = useState<CustomizeCategory>('avatars');
   const [equippingId, setEquippingId] = useState<string | null>(null);
@@ -90,16 +78,14 @@ export const ProfileSettingsView: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const loadExtras = async () => {
-    const [achRes, shopRes, sessRes] = await Promise.allSettled([
+    const [achRes, shopRes] = await Promise.allSettled([
       apiRequest<{ achievements: AchievementItem[] }>('/api/achievements'),
       apiRequest<{ items: ShopItem[] }>('/api/shop'),
-      apiRequest<{ sessions: SessionRow[] }>('/api/auth/sessions'),
     ]);
     if (achRes.status === 'fulfilled') setAchievements(achRes.value.achievements);
     if (shopRes.status === 'fulfilled') {
       setInventory(shopRes.value.items.filter((it) => it.ownedQuantity > 0));
     }
-    if (sessRes.status === 'fulfilled') setSessions(sessRes.value.sessions);
   };
 
   useEffect(() => {
@@ -123,6 +109,14 @@ export const ProfileSettingsView: React.FC = () => {
   const activeBanner = user.equipped?.banner?.value;
   const hasBanner = Boolean(activeBanner);
   const unlockedCosmetics = inventory.filter((it) => !it.isConsumable && it.ownedQuantity > 0);
+  const claimableAchievementsCount =
+    achievements.length > 0
+      ? achievements.filter((ach) => ach.unlocked && !ach.claimed).length
+      : user.claimableAchievements || 0;
+  const sortedAchievements = [...achievements].sort((a, b) => {
+    const rank = (item: AchievementItem) => (item.unlocked && !item.claimed ? 0 : item.unlocked ? 1 : 2);
+    return rank(a) - rank(b);
+  });
 
   const filterByCustomizeCategory = (cat: CustomizeCategory): ShopItem[] => {
     switch (cat) {
@@ -219,53 +213,6 @@ export const ProfileSettingsView: React.FC = () => {
     }
   };
 
-  const handleRevokeSession = async (id: string) => {
-    try {
-      const res = await apiRequest<{ revokedCurrent: boolean }>(`/api/auth/sessions/${id}`, {
-        method: 'DELETE',
-      });
-      if (res.revokedCurrent) {
-        setUser(null);
-      } else {
-        await loadExtras();
-        pushToast(t(lang, 'sessionRevokedToast'), 'info');
-      }
-    } catch {
-      pushToast('Unable to revoke session.', 'error');
-    }
-  };
-
-  const handleRevokeOtherSessions = async () => {
-    try {
-      await apiRequest('/api/auth/sessions/revoke-other', { method: 'POST' });
-      await loadExtras();
-      pushToast(t(lang, 'otherSessionsRevokedToast'), 'info');
-    } catch {
-      pushToast('Failed to revoke other sessions.', 'error');
-    }
-  };
-
-  const handleExportJson = async () => {
-    try {
-      const token = (await import('../lib/api')).getInMemorySessionToken();
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch('/api/user/export', { headers, credentials: 'include' });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sprachwerk-export-${user.username}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      pushToast(t(lang, 'exportFailedToast'), 'error');
-    }
-  };
-
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -345,7 +292,7 @@ export const ProfileSettingsView: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setShowSettings((prev) => !prev)}
+              onClick={() => setShowSettings(true)}
               aria-expanded={showSettings}
               aria-label={t(lang, 'settingsToggleBtn')}
               title={t(lang, 'settingsToggleBtn')}
@@ -364,8 +311,12 @@ export const ProfileSettingsView: React.FC = () => {
         </div>
       </section>
 
-      {/* Mobile Navigation Shortcuts for Secondary Views */}
-      <section className="lg:hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {/* Quick Navigation Shortcuts (Leaderboard, Statistics, Achievements, Admin) */}
+      <section
+        className={`grid gap-2.5 ${
+          user.role === 'admin' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'
+        }`}
+      >
         <button
           type="button"
           onClick={() => setScreen('leaderboard')}
@@ -384,11 +335,19 @@ export const ProfileSettingsView: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() => setScreen('lesson_practice')}
-          className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
+          onClick={() => setShowAchievementsModal(true)}
+          className="relative p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-xs font-semibold text-neutral-900 dark:text-white text-left cursor-pointer min-h-[44px] flex items-center gap-2.5 hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 transition-colors"
         >
-          <GraduationCap size={16} className="text-neutral-700 dark:text-neutral-300 shrink-0" />
-          <span className="truncate">{t(lang, 'navLessonPractice')}</span>
+          <Award size={16} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
+          <span className="truncate">{t(lang, 'achievementsTitle')}</span>
+          {claimableAchievementsCount > 0 && (
+            <span
+              aria-label={`${claimableAchievementsCount} ${t(lang, 'claimableAchievementsHint')}`}
+              className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[#DD0000] text-white text-[11px] font-mono-tabular font-bold leading-none inline-flex items-center justify-center shadow-xs ring-2 ring-[#F8F9FA] dark:ring-[#0A0B0E]"
+            >
+              {claimableAchievementsCount}
+            </span>
+          )}
         </button>
         {user.role === 'admin' && (
           <button
@@ -401,257 +360,6 @@ export const ProfileSettingsView: React.FC = () => {
           </button>
         )}
       </section>
-
-      <AnimatePresence initial={false}>
-        {showSettings && (
-          <motion.section
-            key="profile-settings-drawer"
-            variants={accordionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="overflow-hidden"
-          >
-            <div className="space-y-6">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Settings size={17} className="text-[#DD0000] dark:text-[#FFCE00] shrink-0" />
-                  <span>{t(lang, 'settingsSectionTitle')}</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(false)}
-                  aria-label={t(lang, 'close')}
-                  className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Profile, Inventory & Settings Form */}
-              <form
-                onSubmit={handleSavePrefs}
-                className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4"
-              >
-                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-                  {t(lang, 'profileTitle')}
-                </h3>
-
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                    {t(lang, 'displayNameLabel')}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    minLength={2}
-                    maxLength={32}
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      {t(lang, 'languageLabel')}
-                    </label>
-                    <select
-                      value={selectedLang}
-                      onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
-                    >
-                      <option value="fr">Français (fr)</option>
-                      <option value="en">English (en)</option>
-                      <option value="de">Deutsch (de)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                      {t(lang, 'themeLabel')}
-                    </label>
-                    <select
-                      value={selectedTheme}
-                      onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
-                    >
-                      <option value="light">{t(lang, 'themeLight')}</option>
-                      <option value="dark">{t(lang, 'themeDark')}</option>
-                    </select>
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={leaderboardVisible}
-                    onChange={(e) => setLeaderboardVisible(e.target.checked)}
-                    className="accent-[#DD0000]"
-                  />
-                  <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={reducedMotionPref}
-                    onChange={(e) => setReducedMotionPref(e.target.checked)}
-                    className="accent-[#DD0000]"
-                  />
-                  <span>{t(lang, 'reducedMotionLabel')}</span>
-                </label>
-
-            <button
-              type="submit"
-              disabled={savingPrefs}
-              className="px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
-            >
-              {savingPrefs ? t(lang, 'savingText') : t(lang, 'saveSettings')}
-            </button>
-          </form>
-
-          {/* Change Password & Active Sessions */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <form
-              onSubmit={handleChangePassword}
-              className="lg:col-span-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-3"
-            >
-              <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <KeyRound size={16} />
-                <span>{t(lang, 'changePasswordTitle')}</span>
-              </h3>
-              <input
-                type="password"
-                required
-                placeholder={t(lang, 'currentPasswordPlaceholder')}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-              />
-              <input
-                type="password"
-                required
-                minLength={8}
-                placeholder={t(lang, 'newPasswordMinPlaceholder')}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-              />
-              <input
-                type="password"
-                required
-                minLength={8}
-                placeholder={t(lang, 'confirmNewPasswordPlaceholder')}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer min-h-[44px]"
-              >
-                {t(lang, 'updatePasswordBtn')}
-              </button>
-            </form>
-
-            <div className="lg:col-span-7 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Monitor size={16} />
-                  <span>{t(lang, 'activeSessionsTitle')}</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={handleRevokeOtherSessions}
-                  className="text-xs font-semibold text-[#DD0000] hover:underline cursor-pointer"
-                >
-                  {t(lang, 'revokeOthers')}
-                </button>
-              </div>
-              <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-48 overflow-y-auto">
-                {sessions.map((s) => (
-                  <div key={s.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                    <div className="min-w-0">
-                      <div className="font-medium text-neutral-900 dark:text-white truncate">
-                        {s.isCurrent ? t(lang, 'currentSessionLabel') : t(lang, 'activeSessionLabel')} · {s.ip_prefix || 'local'}
-                      </div>
-                      <div className="text-neutral-500 truncate">{s.user_agent || t(lang, 'browserLabel')}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRevokeSession(s.id)}
-                      className="text-neutral-500 hover:text-[#DD0000] font-semibold shrink-0 cursor-pointer"
-                    >
-                      {t(lang, 'revokeBtn')}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={handleExportJson}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-900 dark:text-white cursor-pointer min-h-[44px]"
-                >
-                  <Download size={14} />
-                  <span>{t(lang, 'exportJsonBtn')}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DD0000] cursor-pointer min-h-[44px]"
-                >
-                  <Trash2 size={14} />
-                  <span>{t(lang, 'deleteAccountBtn')}</span>
-                </button>
-              </div>
-
-              <AnimatePresence initial={false}>
-                {showDeleteConfirm && (
-                  <motion.form
-                    key="delete-account-confirm"
-                    variants={accordionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    onSubmit={handleDeleteAccount}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
-                        <ShieldAlert size={15} className="shrink-0" />
-                        <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <input
-                          type="password"
-                          required
-                          placeholder={t(lang, 'deletePasswordPlaceholder')}
-                          value={deletePassword}
-                          onChange={(e) => setDeletePassword(e.target.value)}
-                          className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
-                        />
-                        <button
-                          type="submit"
-                          className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer min-h-[40px]"
-                        >
-                          {t(lang, 'confirmDeleteBtn')}
-                        </button>
-                      </div>
-                    </div>
-                  </motion.form>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
 
       {/* Owned Inventory */}
       <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
@@ -727,80 +435,6 @@ export const ProfileSettingsView: React.FC = () => {
               })}
             </div>
           )}
-      </section>
-
-      {/* Achievements */}
-      <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 space-y-4">
-        <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-          <Award size={18} className="text-[#D99B00] dark:text-[#FFCE00]" />
-          <span>{t(lang, 'achievementsTitle')}</span>
-        </h3>
-        <motion.div
-          variants={createStaggerContainerVariants(isMobile ? 0.025 : 0.035, 0.01)}
-          initial="initial"
-          animate="animate"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
-        >
-          {achievements.map((ach) => {
-            const claimable = ach.unlocked && !ach.claimed;
-            const justClaimed = claimedAchId === ach.id;
-            return (
-              <motion.div
-                key={ach.id}
-                variants={createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10)}
-              >
-                <motion.div
-                  animate={
-                    justClaimed && !reducedMotion
-                      ? { scale: [1, 1.03, 1] }
-                      : { scale: 1 }
-                  }
-                  transition={pulseTransition}
-                  className={`relative h-full rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
-                    claimable
-                      ? 'border-[#FFCE00] bg-[#FFCE00]/8 sw-soft-glow'
-                      : ach.unlocked
-                      ? 'border-[#FFCE00]/60 bg-[#FFCE00]/5'
-                      : 'border-neutral-200 dark:border-neutral-800 opacity-75'
-                  }`}
-                >
-                  <CelebrationBurst active={justClaimed} />
-                <div>
-                  <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                    {ach.name_i18n[lang] || ach.name_i18n.en}
-                  </div>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-                    {ach.description_i18n[lang] || ach.description_i18n.en}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="inline-flex items-center gap-1 text-xs font-mono-tabular font-semibold text-neutral-800 dark:text-[#FFCE00]">
-                    <Coins size={13} /> +{ach.coinReward}
-                  </span>
-                  {ach.claimed ? (
-                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      {t(lang, 'claimedLabel')}
-                    </span>
-                  ) : ach.unlocked ? (
-                    <motion.button
-                      type="button"
-                      whileHover={reducedMotion || isMobile ? undefined : { scale: 1.03 }}
-                      whileTap={reducedMotion ? undefined : { scale: 0.94 }}
-                      transition={MOTION_SPRING.snappy}
-                      onClick={() => handleClaimAchievement(ach)}
-                      className="px-2.5 py-1 rounded-lg bg-[#FFCE00] text-black text-xs font-bold cursor-pointer"
-                    >
-                      {t(lang, 'claimReward')}
-                    </motion.button>
-                  ) : (
-                    <span className="text-[11px] text-neutral-400">{t(lang, 'lockedLabel')}</span>
-                  )}
-                </div>
-                </motion.div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
       </section>
 
       {/* About Webapp Footer Info */}
@@ -1082,6 +716,317 @@ export const ProfileSettingsView: React.FC = () => {
               </div>
             );
           })()}
+        </div>
+      </MotionModal>
+
+      {/* Achievements Modal / Bottom Sheet */}
+      <MotionModal
+        open={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        maxWidthClass="sm:max-w-3xl"
+        mobileBottomSheet
+        panelClassName="flex flex-col overflow-hidden"
+        ariaLabel={t(lang, 'achievementsTitle')}
+      >
+        <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-start justify-between gap-3 shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <Award size={18} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
+              <span>{t(lang, 'achievementsTitle')}</span>
+              {claimableAchievementsCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#DD0000] text-white text-[11px] font-mono-tabular font-bold">
+                  {claimableAchievementsCount}
+                </span>
+              )}
+            </h3>
+            {claimableAchievementsCount > 0 && (
+              <p className="text-xs text-[#DD0000] dark:text-[#FFCE00] font-medium mt-0.5">
+                {claimableAchievementsCount} {t(lang, 'claimableAchievementsHint')}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAchievementsModal(false)}
+            aria-label={t(lang, 'close')}
+            className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto flex-1">
+          <motion.div
+            variants={createStaggerContainerVariants(isMobile ? 0.025 : 0.035, 0.01)}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+          >
+            {sortedAchievements.map((ach) => {
+              const claimable = ach.unlocked && !ach.claimed;
+              const justClaimed = claimedAchId === ach.id;
+              return (
+                <motion.div
+                  key={ach.id}
+                  variants={createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10)}
+                >
+                  <motion.div
+                    animate={
+                      justClaimed && !reducedMotion
+                        ? { scale: [1, 1.03, 1] }
+                        : { scale: 1 }
+                    }
+                    transition={pulseTransition}
+                    className={`relative h-full rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
+                      claimable
+                        ? 'border-[#FFCE00] bg-[#FFCE00]/8 sw-soft-glow'
+                        : ach.unlocked
+                        ? 'border-[#FFCE00]/60 bg-[#FFCE00]/5'
+                        : 'border-neutral-200 dark:border-neutral-800 opacity-75'
+                    }`}
+                  >
+                    <CelebrationBurst active={justClaimed} />
+                    <div>
+                      <div className="text-sm font-bold text-neutral-900 dark:text-white">
+                        {ach.name_i18n[lang] || ach.name_i18n.en}
+                      </div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                        {ach.description_i18n[lang] || ach.description_i18n.en}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                      <span className="inline-flex items-center gap-1 text-xs font-mono-tabular font-semibold text-neutral-800 dark:text-[#FFCE00]">
+                        <Coins size={13} /> +{ach.coinReward}
+                      </span>
+                      {ach.claimed ? (
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          {t(lang, 'claimedLabel')}
+                        </span>
+                      ) : ach.unlocked ? (
+                        <motion.button
+                          type="button"
+                          whileHover={reducedMotion || isMobile ? undefined : { scale: 1.03 }}
+                          whileTap={reducedMotion ? undefined : { scale: 0.94 }}
+                          transition={MOTION_SPRING.snappy}
+                          onClick={() => handleClaimAchievement(ach)}
+                          className="px-2.5 py-1 rounded-lg bg-[#FFCE00] text-black text-xs font-bold cursor-pointer"
+                        >
+                          {t(lang, 'claimReward')}
+                        </motion.button>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">{t(lang, 'lockedLabel')}</span>
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </MotionModal>
+
+      {/* Settings & Security Modal / Bottom Sheet */}
+      <MotionModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        maxWidthClass="sm:max-w-3xl"
+        mobileBottomSheet
+        panelClassName="flex flex-col overflow-hidden"
+        ariaLabel={t(lang, 'settingsSectionTitle')}
+      >
+        <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-3 shrink-0">
+          <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <Settings size={18} className="text-[#DD0000] dark:text-[#FFCE00] shrink-0" />
+            <span>{t(lang, 'settingsSectionTitle')}</span>
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowSettings(false)}
+            aria-label={t(lang, 'close')}
+            className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto flex-1 space-y-5">
+          {/* Preferences Form */}
+          <form
+            onSubmit={handleSavePrefs}
+            className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-4 sm:p-5 space-y-4"
+          >
+            <h4 className="text-sm font-display font-bold text-neutral-900 dark:text-white">
+              {t(lang, 'profileTitle')}
+            </h4>
+
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                {t(lang, 'displayNameLabel')}
+              </label>
+              <input
+                type="text"
+                required
+                minLength={2}
+                maxLength={32}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#12141A] text-sm text-neutral-900 dark:text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t(lang, 'languageLabel')}
+                </label>
+                <select
+                  value={selectedLang}
+                  onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                >
+                  <option value="fr">Français (fr)</option>
+                  <option value="en">English (en)</option>
+                  <option value="de">Deutsch (de)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                  {t(lang, 'themeLabel')}
+                </label>
+                <select
+                  value={selectedTheme}
+                  onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                >
+                  <option value="light">{t(lang, 'themeLight')}</option>
+                  <option value="dark">{t(lang, 'themeDark')}</option>
+                </select>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={leaderboardVisible}
+                onChange={(e) => setLeaderboardVisible(e.target.checked)}
+                className="accent-[#DD0000]"
+              />
+              <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
+            </label>
+
+            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={reducedMotionPref}
+                onChange={(e) => setReducedMotionPref(e.target.checked)}
+                className="accent-[#DD0000]"
+              />
+              <span>{t(lang, 'reducedMotionLabel')}</span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={savingPrefs}
+              className="px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+            >
+              {savingPrefs ? t(lang, 'savingText') : t(lang, 'saveSettings')}
+            </button>
+          </form>
+
+          {/* Change Password (Full Width) */}
+          <form
+            onSubmit={handleChangePassword}
+            className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-4 sm:p-5 space-y-3"
+          >
+            <h4 className="text-sm font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <KeyRound size={15} />
+              <span>{t(lang, 'changePasswordTitle')}</span>
+            </h4>
+            <input
+              type="password"
+              required
+              placeholder={t(lang, 'currentPasswordPlaceholder')}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#12141A] text-sm"
+            />
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder={t(lang, 'newPasswordMinPlaceholder')}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#12141A] text-sm"
+            />
+            <input
+              type="password"
+              required
+              minLength={8}
+              placeholder={t(lang, 'confirmNewPasswordPlaceholder')}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#12141A] text-sm"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2.5 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer min-h-[44px]"
+            >
+              {t(lang, 'updatePasswordBtn')}
+            </button>
+          </form>
+
+          {/* Delete Account */}
+          <div className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#DD0000] cursor-pointer min-h-[44px]"
+              >
+                <Trash2 size={14} />
+                <span>{t(lang, 'deleteAccountBtn')}</span>
+              </button>
+            </div>
+
+            <AnimatePresence initial={false}>
+              {showDeleteConfirm && (
+                <motion.form
+                  key="delete-account-confirm"
+                  variants={accordionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  onSubmit={handleDeleteAccount}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
+                      <ShieldAlert size={15} className="shrink-0" />
+                      <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        type="password"
+                        required
+                        placeholder={t(lang, 'deletePasswordPlaceholder')}
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer min-h-[40px]"
+                      >
+                        {t(lang, 'confirmDeleteBtn')}
+                      </button>
+                    </div>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </MotionModal>
     </div>

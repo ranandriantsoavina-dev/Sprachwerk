@@ -429,48 +429,6 @@ export const HomeView: React.FC = () => {
         </div>
       </motion.section>
 
-      {/* Recent Practice History */}
-      <motion.section
-        variants={sectionVariants}
-        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6"
-      >
-        <div className="flex items-center justify-between mb-4 gap-2">
-          <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-            {t(lang, 'recentActivity')}
-          </h3>
-          <button
-            type="button"
-            onClick={() => setScreen('statistics')}
-            className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer shrink-0"
-          >
-            {t(lang, 'navStatistics')}
-          </button>
-        </div>
-
-        {!stats || stats.sessions.length === 0 ? (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{t(lang, 'noRecentSessions')}</p>
-        ) : (
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {stats.sessions.slice(0, 5).map((s) => (
-              <div key={s.id} className="py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                <div>
-                  <span className="font-medium text-neutral-900 dark:text-white">
-                    {s.mode === 'lesson' ? t(lang, 'modeLessonPractice') : t(lang, 'modeGeneralPractice')}
-                  </span>
-                  <span className="text-xs text-neutral-500 ml-2 font-mono-tabular">
-                    {new Date(s.createdAt).toLocaleDateString(
-                      lang === 'fr' ? 'fr-FR' : lang === 'de' ? 'de-DE' : 'en-US'
-                    )}
-                  </span>
-                </div>
-                <div className="text-xs font-mono-tabular text-neutral-700 dark:text-neutral-300">
-                  {s.correctCount}/{s.totalQuestions} · +{s.xpAwarded} XP
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </motion.section>
     </motion.div>
   );
 };
