@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Check, Copy, KeyRound, Mail, Plus, ShieldCheck, XCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { ApiError, apiRequest } from '../lib/api';
+import {
+  MOTION_SPRING,
+  createSlideUpVariants,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  useMotionPreference,
+} from '../lib/motion';
 import type { GamificationConfig, RegistrationCodeAudit } from '../types/domain';
 import {
   ResponsiveTable,
@@ -34,6 +42,7 @@ interface AdminSettingsResponse {
 
 export const AdminView: React.FC = () => {
   const { lang, pushToast, refreshUser } = useApp();
+  const reducedMotion = useMotionPreference();
   const [codes, setCodes] = useState<RegistrationCodeAudit[]>([]);
   const [newlyGenerated, setNewlyGenerated] = useState<GeneratedCode[]>([]);
   const [count, setCount] = useState(1);
@@ -140,9 +149,17 @@ export const AdminView: React.FC = () => {
     }
   };
 
+  const containerVariants = createStaggerContainerVariants(0.045, 0.01);
+  const sectionVariants = createStaggerItemVariants(reducedMotion, 8);
+
   return (
-    <div className="space-y-6 min-w-0">
-      <div>
+    <motion.div
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+      className="space-y-6 min-w-0"
+    >
+      <motion.div variants={sectionVariants}>
         <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
           <ShieldCheck size={22} className="text-[#DD0000] shrink-0" />
           <span>{t(lang, 'adminTitle')}</span>
@@ -150,11 +167,11 @@ export const AdminView: React.FC = () => {
         <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
           {t(lang, 'adminDesc')}
         </p>
-      </div>
+      </motion.div>
 
       {/* Mailtrap & Auth Status */}
       {settings && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
@@ -179,29 +196,34 @@ export const AdminView: React.FC = () => {
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button
+              <motion.button
                 type="button"
+                whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                transition={MOTION_SPRING.snappy}
                 onClick={toggleEmailVerification}
-                className="px-3.5 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold cursor-pointer"
+                className="px-3.5 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold cursor-pointer transition-colors"
               >
                 {t(lang, 'emailVerificationToggle')}:{' '}
                 {settings.auth.requireEmailVerification ? t(lang, 'mandatoryLabel') : t(lang, 'optionalLabel')}
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                transition={MOTION_SPRING.snappy}
                 onClick={toggleStreakProtection}
-                className="px-3.5 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold cursor-pointer"
+                className="px-3.5 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold cursor-pointer transition-colors"
               >
                 {t(lang, 'streakFreezeShopToggle')}:{' '}
                 {settings.gamification.streakProtectionEnabled ? t(lang, 'enabledLabel') : t(lang, 'disabledLabel')}
-              </button>
+              </motion.button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Generate Single-Use Registration Codes */}
-      <form
+      <motion.form
+        variants={sectionVariants}
         onSubmit={handleGenerate}
         className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4"
       >
@@ -250,45 +272,60 @@ export const AdminView: React.FC = () => {
           </div>
         </div>
 
-        <button
+        <motion.button
           type="submit"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+          transition={MOTION_SPRING.snappy}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold cursor-pointer min-h-[44px] transition-colors"
         >
           <Plus size={16} />
           <span>{t(lang, 'generateCodesBtn')}</span>
-        </button>
+        </motion.button>
 
-        {newlyGenerated.length > 0 && (
-          <div className="mt-4 p-4 rounded-xl border border-[#FFCE00] bg-[#FFCE00]/10 space-y-2">
-            <div className="text-xs font-bold text-neutral-900 dark:text-[#FFCE00]">
-              {t(lang, 'copyCodesWarning')}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {newlyGenerated.map((g) => (
-                <div
-                  key={g.id}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
-                >
-                  <code className="font-mono-tabular text-sm font-bold text-neutral-900 dark:text-white break-all">
-                    {g.code}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(g.code)}
-                    className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white cursor-pointer shrink-0"
-                    title="Copy code"
+        <AnimatePresence>
+          {newlyGenerated.length > 0 && (
+            <motion.div
+              key="generated-codes-banner"
+              variants={createSlideUpVariants(reducedMotion, 8)}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="mt-4 p-4 rounded-xl border border-[#FFCE00] bg-[#FFCE00]/10 space-y-2"
+            >
+              <div className="text-xs font-bold text-neutral-900 dark:text-[#FFCE00]">
+                {t(lang, 'copyCodesWarning')}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {newlyGenerated.map((g) => (
+                  <div
+                    key={g.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
                   >
-                    <Copy size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </form>
+                    <code className="font-mono-tabular text-sm font-bold text-neutral-900 dark:text-white break-all">
+                      {g.code}
+                    </code>
+                    <motion.button
+                      type="button"
+                      whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                      onClick={() => handleCopy(g.code)}
+                      className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white cursor-pointer shrink-0"
+                      title="Copy code"
+                    >
+                      <Copy size={14} />
+                    </motion.button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.form>
 
       {/* Code Audit Table */}
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden min-w-0">
+      <motion.div
+        variants={sectionVariants}
+        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden min-w-0"
+      >
         <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 text-sm font-display font-bold text-neutral-900 dark:text-white">
           {t(lang, 'codeAuditTitle')}
         </div>
@@ -406,7 +443,7 @@ export const AdminView: React.FC = () => {
             </ResponsiveTableBody>
           </ResponsiveTable>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

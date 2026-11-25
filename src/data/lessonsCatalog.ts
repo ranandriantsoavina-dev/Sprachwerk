@@ -29,8 +29,18 @@ import { LESSON_A1_27 } from './lessons/a1_27';
 import { LESSON_A1_28 } from './lessons/a1_28';
 import { LESSON_A1_29 } from './lessons/a1_29';
 import { LESSON_A1_30 } from './lessons/a1_30';
+import { LESSON_A2_01 } from './lessons/a2_01';
+import { LESSON_A2_02 } from './lessons/a2_02';
+import { LESSON_A2_03 } from './lessons/a2_03';
+import { LESSON_A2_04 } from './lessons/a2_04';
+import { LESSON_A2_05 } from './lessons/a2_05';
+import { LESSON_A2_06 } from './lessons/a2_06';
+import { LESSON_A2_07 } from './lessons/a2_07';
+import { LESSON_A2_08 } from './lessons/a2_08';
+import { LESSON_A2_09 } from './lessons/a2_09';
+import { LESSON_A2_10 } from './lessons/a2_10';
 
-export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export interface LevelSectionMeta {
   level: CefrLevel;
@@ -68,6 +78,12 @@ export const LEVEL_STRUCTURE: LevelSectionMeta[] = [
     level: 'C1',
     title: 'Advanced · Fortgeschrittene Sprachverwendung',
     subtitle: 'Use sophisticated grammar, write academic texts and communicate with precision and flexibility.',
+    lessonCount: 40,
+  },
+  {
+    level: 'C2',
+    title: 'Mastery · Große Sprachbeherrschung',
+    subtitle: 'Control complex grammar consistently, select forms for fine shades of meaning and adapt syntax to register.',
     lessonCount: 40,
   },
 ];
@@ -111,8 +127,21 @@ const AUTHORED_A1_LESSONS: Lesson[] = [
   LESSON_A1_30,
 ];
 
+const AUTHORED_A2_LESSONS: Lesson[] = [
+  LESSON_A2_01,
+  LESSON_A2_02,
+  LESSON_A2_03,
+  LESSON_A2_04,
+  LESSON_A2_05,
+  LESSON_A2_06,
+  LESSON_A2_07,
+  LESSON_A2_08,
+  LESSON_A2_09,
+  LESSON_A2_10,
+];
+
 const AUTHORED_LESSONS_BY_ID: Record<string, Lesson> = Object.fromEntries(
-  AUTHORED_A1_LESSONS.map((lesson) => [lesson.id, lesson])
+  [...AUTHORED_A1_LESSONS, ...AUTHORED_A2_LESSONS].map((lesson) => [lesson.id, lesson])
 );
 
 function buildLevelLessons(level: CefrLevel, seeds: readonly RawLessonSeed[]): Lesson[] {
@@ -334,10 +363,54 @@ const C1_LESSONS: readonly RawLessonSeed[] = [
   [40, 'Advanced grammatical accuracy and correction', 'Grammatische Präzision und Fehlerkorrektur'],
 ];
 
+const C2_LESSONS: readonly RawLessonSeed[] = [
+  [1, 'Advanced valency and argument structure', 'Erweiterte Valenz und Argumentstruktur'],
+  [2, 'Complement and adjunct distinctions', 'Komplemente und Supplemente'],
+  [3, 'Fine-grained verb government and case selection', 'Differenzierte Verbrektion und Kasuswahl'],
+  [4, 'Semantic functions of case and prepositional phrases', 'Semantische Kasusfunktionen und Präpositionalgruppen'],
+  [5, 'Highly complex nominal groups', 'Hochkomplexe Nominalgruppen'],
+  [6, 'Advanced attributive structures and modifier scope', 'Erweiterte Attributstrukturen und Skopus'],
+  [7, 'Appositions, parentheticals and syntactic insertions', 'Appositionen, Parenthesen und syntaktische Einschübe'],
+  [8, 'Advanced participial constructions and attachment', 'Erweiterte Partizipialkonstruktionen und Anbindung'],
+  [9, 'Infinitive constructions: control and reference', 'Infinitivkonstruktionen: Kontrolle und Referenz'],
+  [10, 'Multiple and nested subordinate clauses', 'Mehrfach verschachtelte Nebensätze'],
+  [11, 'Clause hierarchy and syntactic dependency', 'Satzhierarchie und syntaktische Abhängigkeit'],
+  [12, 'Word order in deeply embedded structures', 'Wortstellung in komplex eingebetteten Strukturen'],
+  [13, 'Scrambling, constituent order and scope', 'Umstellung, Satzgliedstellung und Skopus'],
+  [14, 'Topicalization and contrastive focus', 'Topikalisierung und kontrastiver Fokus'],
+  [15, 'Information structure: topic, focus and comment', 'Informationsstruktur: Thema, Fokus und Kommentar'],
+  [16, 'Extraposition and the information function of the Nachfeld', 'Ausklammerung und Informationsfunktion des Nachfelds'],
+  [17, 'Advanced ellipsis and syntactic compression', 'Erweiterte Ellipse und syntaktische Verdichtung'],
+  [18, 'Dislocations, repairs and self-correction in speech', 'Ausklammerungen, Reparaturen und Selbstkorrekturen'],
+  [19, 'Advanced coordination and asymmetric coordination', 'Erweiterte Koordination und asymmetrische Verknüpfung'],
+  [20, 'Fine distinctions between conjunctions and connectors', 'Feinunterschiede bei Konjunktionen und Konnektoren'],
+  [21, 'Discourse relations and grammatical cohesion', 'Diskursrelationen und grammatische Kohäsion'],
+  [22, 'Anaphora, cataphora and reference chains', 'Anapher, Katapher und Referenzketten'],
+  [23, 'Deixis and context-dependent reference', 'Deixis und kontextabhängige Referenz'],
+  [24, 'Advanced tense and aspect in discourse', 'Erweiterte Tempus- und Aspektverhältnisse im Diskurs'],
+  [25, 'Epistemic, deontic and evidential modality', 'Epistemische, deontische und evidenzielle Modalität'],
+  [26, 'Nuanced use of Konjunktiv I and II', 'Nuancierter Gebrauch von Konjunktiv I und II'],
+  [27, 'Voice, agent suppression and perspective', 'Diathese, Agensausblendung und Perspektivierung'],
+  [28, 'Focus constructions and cleft-like patterns', 'Fokuskonstruktionen und Spaltsatzmuster'],
+  [29, 'Negation scope and polarity-sensitive structures', 'Negationsskopus und polaritätssensitive Strukturen'],
+  [30, 'Advanced comparison and scalar constructions', 'Erweiterte Vergleichs- und Gradationskonstruktionen'],
+  [31, 'Modal particles, stance and interpersonal meaning', 'Modalpartikeln, Sprecherhaltung und interpersonelle Bedeutung'],
+  [32, 'Discourse particles and pragmatic sentence patterns', 'Diskurspartikeln und pragmatische Satzmuster'],
+  [33, 'Idiomatic constructions and constructional patterns', 'Idiomatische Konstruktionen und Mustergrammatik'],
+  [34, 'Register-sensitive grammar: spoken, formal and academic German', 'Registerabhängige Grammatik: gesprochenes, formelles und wissenschaftliches Deutsch'],
+  [35, 'Spoken grammar and interactional syntax', 'Gesprochene Grammatik und interaktionale Syntax'],
+  [36, 'Punctuation and orthography in complex syntax', 'Zeichensetzung und Orthografie bei komplexer Syntax'],
+  [37, 'Cohesion through nominalization and referential condensation', 'Kohäsion durch Nominalisierung und referenzielle Verdichtung'],
+  [38, 'Grammatical ambiguity and precision editing', 'Grammatische Mehrdeutigkeit und präzises Lektorat'],
+  [39, 'Rhetorical syntax across genres', 'Rhetorische Syntax in unterschiedlichen Textsorten'],
+  [40, 'Integrated grammatical mastery and stylistic revision', 'Integrierte Grammatikbeherrschung und stilistische Überarbeitung'],
+];
+
 export const LESSONS_CATALOG: Lesson[] = [
   ...buildLevelLessons('A1', A1_LESSONS),
   ...buildLevelLessons('A2', A2_LESSONS),
   ...buildLevelLessons('B1', B1_LESSONS),
   ...buildLevelLessons('B2', B2_LESSONS),
   ...buildLevelLessons('C1', C1_LESSONS),
+  ...buildLevelLessons('C2', C2_LESSONS),
 ];

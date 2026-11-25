@@ -1,30 +1,64 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Clock,
   Layers,
   Lightbulb,
   Play,
-  RotateCcw,
   Save,
   SlidersHorizontal,
   Sparkles,
+  X,
   XCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { QUESTIONS_CATALOG } from '../data/questionsCatalog';
+import { useKeyboardViewport } from '../hooks/useKeyboardViewport';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_DURATION,
+  MOTION_EASE,
+  MOTION_SPRING,
+  createSlideDirectionVariants,
+  useMotionPreference,
+} from '../lib/motion';
 import { enqueueOfflineEvent } from '../lib/offlineQueue';
 import type {
   DifficultyLevel,
   ExerciseType,
   Flashcard,
   PracticeParameters,
+  PracticeResultRow,
+  PracticeRewardSummary,
   Question,
   UserProfile,
 } from '../types/domain';
+import {
+  getShuffledMatchingRights,
+  isMultiSelectQuestion,
+  normalizeAnswer,
+} from '../utils/exerciseHelpers';
+import {
+  AnimatedNumber,
+  AnimatedProgressBar,
+  CelebrationBurst,
+  RewardFloatingBadge,
+} from './motion/MotionPrimitives';
+import {
+  ErrorCorrectionExercise,
+  GapFillExercise,
+  MatchingExercise,
+  MultipleChoiceExercise,
+  SentenceConstructionExercise,
+  TransformationExercise,
+  TranslationExercise,
+  TrueFalseExercise,
+} from './practice/ExerciseFormats';
+import { SessionResultsView } from './practice/SessionResultsView';
 
 export const DEFAULT_PRACTICE_PARAMS: PracticeParameters = {
   exerciseTypes: ['multiple_choice', 'gap_fill'],
@@ -97,18 +131,6 @@ const DIFFICULTIES: Array<{
 const TIMER_OPTIONS = [0, 10, 15, 20, 30, 45, 60];
 const COUNT_PRESETS = [5, 10, 15, 20, 30];
 
-interface PracticeResultRow {
-  questionId: string;
-  topic: string;
-  prompt: string;
-  userAnswer: string;
-  correctAnswer: string;
-  explanation: string;
-  isCorrect: boolean;
-  skipped: boolean;
-  timedOut: boolean;
-}
-
 export const PracticeParametersPanel: React.FC<{
   mode: 'general' | 'lesson';
   intent?: 'start' | 'defaults';
@@ -117,6 +139,7 @@ export const PracticeParametersPanel: React.FC<{
   selectedLessons?: string[];
   lessonTitle?: string;
   lessonHasContent?: boolean;
+  lessonHasPractice?: boolean;
   availableTypes?: ExerciseType[];
   availableDifficulties?: DifficultyLevel[];
   onBack?: () => void;
@@ -128,11 +151,24 @@ export const PracticeParametersPanel: React.FC<{
   selectedLessons = [],
   lessonTitle,
   lessonHasContent,
+  lessonHasPractice,
   availableTypes,
   availableDifficulties,
   onBack,
 }) => {
-  const { user, lang, isOnline, pushToast, refreshUser, setUser, syncOfflineQueue, setScreen } = useApp();
+  const {
+    user,
+    lang,
+    isOnline,
+    pushToast,
+    refreshUser,
+    setUser,
+    syncOfflineQueue,
+    setScreen,
+    setPracticeSessionActive,
+  } = useApp();
+
+  const { isKeyboardOpen, keyboardOffset } = useKeyboardViewport();
 
   const [params, setParams] = useState<PracticeParameters>(() => {
     if (user?.practicePrefs) return user.practicePrefs;
@@ -157,11 +193,20 @@ export const PracticeParametersPanel: React.FC<{
   const [results, setResults] = useState<PracticeResultRow[]>([]);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [sessionElapsed, setSessionElapsed] = useState(0);
-  const [rewardSummary, setRewardSummary] = useState<{
-    xpAwarded: number;
-    coinsAwarded: number;
-    queuedOffline?: boolean;
-  } | null>(null);
+  const [isRetrySession, setIsRetrySession] = useState(false);
+  const [rewardSummary, setRewardSummary] = useState<PracticeRewardSummary | null>(null);
+
+  const reducedMotion = useMotionPreference();
+  const questionSlideVariants = useMemo(
+    () => createSlideDirectionVariants(reducedMotion, 20),
+    [reducedMotion]
+  );
+
+  // Inform AppContext when inside active exercise stage so mobile hides bottom tab bar
+  useEffect(() => {
+    setPracticeSessionActive(stage === 'active');
+    return () => setPracticeSessionActive(false);
+  }, [stage, setPracticeSessionActive]);
 
   const allowedTypes = useMemo(() => {
     if (availableTypes && availableTypes.length > 0) {
@@ -254,6 +299,7 @@ export const PracticeParametersPanel: React.FC<{
         return;
       }
 
+      setIsRetrySession(false);
       setQuestions(res.items);
       setCurrentIdx(0);
       setDraftAnswer('');
@@ -286,6 +332,7 @@ export const PracticeParametersPanel: React.FC<{
             params.order === 'shuffled'
               ? [...pool].sort(() => Math.random() - 0.5)
               : [...pool];
+          setIsRetrySession(false);
           setQuestions(picked.slice(0, Math.max(1, Math.min(200, params.questionCount))));
           setCurrentIdx(0);
           setDraftAnswer('');
@@ -302,7 +349,7 @@ export const PracticeParametersPanel: React.FC<{
           return;
         }
       }
-      if (mode === 'lesson' && lessonHasContent === false) {
+      if (mode === 'lesson' && (lessonHasPractice === false || lessonHasContent === false)) {
         setStage('coming_soon');
         return;
       }
@@ -314,38 +361,36 @@ export const PracticeParametersPanel: React.FC<{
 
   const currentQuestion = questions[currentIdx];
 
-  const shuffledRightOptions = useMemo(() => {
-    if (!currentQuestion?.matching_pairs || currentQuestion.matching_pairs.length === 0) return [];
-    const items = currentQuestion.matching_pairs.map((p) => p.right);
-    // Deterministic rotation/shuffle seeded by question ID so rows aren't trivially aligned
-    let seed = 0;
-    for (let i = 0; i < currentQuestion.id.length; i++) {
-      seed = (seed * 31 + currentQuestion.id.charCodeAt(i)) >>> 0;
-    }
-    const arr = [...items];
-    for (let i = arr.length - 1; i > 0; i--) {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      const j = seed % (i + 1);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    if (arr.every((val, idx) => val === items[idx]) && arr.length > 1) {
-      [arr[0], arr[1]] = [arr[1], arr[0]];
-    }
-    return arr;
-  }, [currentQuestion]);
-
-  const normalizeAnswer = (raw: string, caseSensitive?: boolean) => {
-    const collapsed = raw.trim().replace(/\s+/g, ' ');
-    return caseSensitive ? collapsed : collapsed.toLowerCase();
-  };
+  const shuffledRightOptions = useMemo(
+    () => getShuffledMatchingRights(currentQuestion),
+    [currentQuestion]
+  );
 
   const handleSubmitAnswer = (timedOut = false, skipped = false) => {
     if (!currentQuestion) return;
-    const normalizedUser = normalizeAnswer(draftAnswer, currentQuestion.case_sensitive);
-    const accepted = currentQuestion.accepted_answers.map((a) =>
-      normalizeAnswer(a, currentQuestion.case_sensitive)
-    );
-    const isCorrect = !timedOut && !skipped && accepted.includes(normalizedUser);
+
+    let isCorrect = false;
+    if (!timedOut && !skipped) {
+      const normalizedUser = normalizeAnswer(draftAnswer, currentQuestion.case_sensitive);
+      const accepted = currentQuestion.accepted_answers.map((a) =>
+        normalizeAnswer(a, currentQuestion.case_sensitive)
+      );
+
+      if (isMultiSelectQuestion(currentQuestion)) {
+        const userSet = new Set(
+          normalizedUser.split(/\s*[|,;]\s*/).map((s) => s.trim()).filter(Boolean)
+        );
+        isCorrect = accepted.some((acc) => {
+          const accSet = new Set(
+            acc.split(/\s*[|,;]\s*/).map((s) => s.trim()).filter(Boolean)
+          );
+          return accSet.size === userSet.size && [...accSet].every((v) => userSet.has(v));
+        });
+      } else {
+        isCorrect = accepted.includes(normalizedUser);
+      }
+    }
+
     const explanation =
       currentQuestion.explanation_i18n[lang] ||
       currentQuestion.explanation_i18n.en ||
@@ -388,8 +433,15 @@ export const PracticeParametersPanel: React.FC<{
       return;
     }
 
-    // Session complete -> submit to backend or queue offline
+    // Session complete
     setStage('summary');
+
+    // Local mistake-drill passes never submit duplicate sessions or duplicate XP/coins
+    if (isRetrySession) {
+      setRewardSummary({ xpAwarded: 0, coinsAwarded: 0 });
+      return;
+    }
+
     const idempotencyKey = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const payload = {
       mode,
@@ -414,11 +466,21 @@ export const PracticeParametersPanel: React.FC<{
     }
 
     try {
-      const res = await apiRequest<{ xpAwarded: number; coinsAwarded: number }>('/api/practice/submit', {
+      const res = await apiRequest<{
+        xpAwarded: number;
+        coinsAwarded: number;
+        dailyBonusXp?: number;
+        dailyBonusCoins?: number;
+      }>('/api/practice/submit', {
         method: 'POST',
         body: payload,
       });
-      setRewardSummary({ xpAwarded: res.xpAwarded, coinsAwarded: res.coinsAwarded });
+      setRewardSummary({
+        xpAwarded: res.xpAwarded,
+        coinsAwarded: res.coinsAwarded,
+        dailyBonusXp: res.dailyBonusXp,
+        dailyBonusCoins: res.dailyBonusCoins,
+      });
       await refreshUser();
     } catch {
       await enqueueOfflineEvent({
@@ -431,6 +493,45 @@ export const PracticeParametersPanel: React.FC<{
       setRewardSummary({ xpAwarded: 0, coinsAwarded: 0, queuedOffline: true });
     }
   };
+
+  const handleRetryMistakes = (questionIds?: string[]) => {
+    const targetIds = new Set(
+      questionIds && questionIds.length > 0
+        ? questionIds
+        : results.filter((r) => !r.isCorrect).map((r) => r.questionId)
+    );
+    const retryPool = questions.filter((q) => targetIds.has(q.id));
+    if (retryPool.length === 0) return;
+
+    setIsRetrySession(true);
+    setQuestions(retryPool);
+    setCurrentIdx(0);
+    setDraftAnswer('');
+    setShowHint(false);
+    setUsedFragmentIndices([]);
+    setSelectedLeftIdx(null);
+    setMatchedPairs({});
+    setCheckedFeedback(null);
+    setResults([]);
+    setSessionElapsed(0);
+    setSecondsLeft(params.timerSeconds);
+    setRewardSummary(null);
+    setStage('active');
+  };
+
+  // Allow pressing Enter to continue after feedback is revealed
+  useEffect(() => {
+    if (stage !== 'active' || !checkedFeedback) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        advanceOrFinish(results);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, checkedFeedback, results, currentIdx]);
 
   if (stage === 'coming_soon') {
     return (
@@ -513,279 +614,427 @@ export const PracticeParametersPanel: React.FC<{
       currentQuestion.hint_i18n?.en ||
       currentQuestion.hint_i18n?.de;
 
-    const handleFragmentClick = (frag: string, fragIdx: number) => {
-      if (checkedFeedback || usedFragmentIndices.includes(fragIdx)) return;
-      setUsedFragmentIndices((prev) => [...prev, fragIdx]);
-      setDraftAnswer((prev) => {
-        const trimmed = prev.trim();
-        return trimmed ? `${trimmed} ${frag}` : frag;
-      });
-    };
+    const formatMeta = ALL_EXERCISE_TYPES.find((et) => et.id === currentQuestion.type);
+    const formatLabel = formatMeta?.labels[lang] || currentQuestion.type.replace('_', ' ');
+    const progressPct = Math.round(
+      ((currentIdx + (checkedFeedback ? 1 : 0)) / Math.max(1, questions.length)) * 100
+    );
+    const canSubmit = draftAnswer.trim().length > 0;
 
-    const handleResetFragments = () => {
-      if (checkedFeedback) return;
-      setUsedFragmentIndices([]);
-      setDraftAnswer('');
-    };
-
-    const handleMatchRightClick = (rightVal: string) => {
-      if (checkedFeedback || selectedLeftIdx === null || !currentQuestion.matching_pairs) return;
-      const nextPairs = { ...matchedPairs };
-      for (const [k, v] of Object.entries(nextPairs)) {
-        if (v === rightVal) {
-          delete nextPairs[Number(k)];
-        }
-      }
-      nextPairs[selectedLeftIdx] = rightVal;
-      setMatchedPairs(nextPairs);
-      setSelectedLeftIdx(null);
-
-      if (Object.keys(nextPairs).length === currentQuestion.matching_pairs.length) {
-        const formatted = currentQuestion.matching_pairs
-          .map((p, idx) => `${p.left} -> ${nextPairs[idx] ?? ''}`)
-          .join(' | ');
-        setDraftAnswer(formatted);
-      } else {
-        setDraftAnswer('');
+    const handleTriggerSubmit = () => {
+      if (!checkedFeedback && canSubmit) {
+        handleSubmitAnswer(false, false);
       }
     };
 
     return (
-      <div className="max-w-3xl space-y-6">
-        <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-          <span className="font-mono-tabular">
-            {currentIdx + 1} / {questions.length} · {currentQuestion.cefr_level} · {currentQuestion.type.replace('_', ' ')}
-          </span>
-          <div className="flex items-center gap-3">
-            {hintText && (
-              <button
-                type="button"
-                onClick={() => setShowHint((h) => !h)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-[#DD0000] dark:hover:text-[#FFCE00] cursor-pointer"
-              >
-                <Lightbulb size={14} />
-                <span>{showHint ? t(lang, 'hideHintBtn') : t(lang, 'hintBtn')}</span>
-              </button>
-            )}
-            {params.timerSeconds > 0 && (
-              <span className="inline-flex items-center gap-1.5 font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00]">
-                <Clock size={14} />
-                {secondsLeft}s
-              </span>
-            )}
+      <div
+        className="max-w-3xl mx-auto flex flex-col pb-24 lg:pb-0"
+        style={
+          isKeyboardOpen
+            ? { paddingBottom: `${keyboardOffset + 96}px` }
+            : undefined
+        }
+      >
+        {/* Compact Session Header (Sticky on mobile <= 50px; clean inline on desktop) */}
+        <div className="sticky top-0 lg:static z-20 -mx-3 px-3 py-2 sm:mx-0 sm:px-0 sm:py-1 bg-[#F8F9FA]/95 dark:bg-[#0A0B0E]/95 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none border-b border-neutral-200/70 dark:border-neutral-800/70 lg:border-b-0 mb-3 sm:mb-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRetrySession(false);
+                setStage('configure');
+              }}
+              aria-label={t(lang, 'exitSessionBtn')}
+              title={t(lang, 'exitSessionBtn')}
+              className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white flex items-center justify-center cursor-pointer shrink-0"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex-1 min-w-0 space-y-1">
+              <AnimatedProgressBar
+                value={currentIdx + (checkedFeedback ? 1 : 0)}
+                max={Math.max(1, questions.length)}
+                trackClassName="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden"
+                barClassName="h-full w-full bg-[#DD0000] dark:bg-[#FFCE00] rounded-full"
+                glowOnIncrease
+                ariaLabel={`${currentIdx + 1} / ${questions.length}`}
+              />
+              <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+                <span className="truncate">
+                  <span className="font-mono-tabular font-semibold text-neutral-800 dark:text-neutral-200">
+                    {currentIdx + 1}/{questions.length}
+                  </span>
+                  <span aria-hidden="true"> · </span>
+                  <span className="font-mono-tabular">{currentQuestion.cefr_level}</span>
+                  <span aria-hidden="true"> · </span>
+                  <span>{formatLabel}</span>
+                </span>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {hintText && (
+                    <button
+                      type="button"
+                      onClick={() => setShowHint((h) => !h)}
+                      className={`inline-flex items-center gap-1 font-semibold cursor-pointer ${
+                        showHint
+                          ? 'text-[#DD0000] dark:text-[#FFCE00]'
+                          : 'text-neutral-600 dark:text-neutral-300 hover:text-[#DD0000] dark:hover:text-[#FFCE00]'
+                      }`}
+                    >
+                      <Lightbulb size={13} />
+                      <span>{showHint ? t(lang, 'hideHintBtn') : t(lang, 'hintBtn')}</span>
+                    </button>
+                  )}
+                  {params.timerSeconds > 0 && (
+                    <motion.span
+                      animate={
+                        secondsLeft <= 5 && !reducedMotion
+                          ? { scale: [1, 1.08, 1] }
+                          : { scale: 1 }
+                      }
+                      transition={
+                        secondsLeft <= 5 && !reducedMotion
+                          ? { duration: 0.7, repeat: Infinity }
+                          : undefined
+                      }
+                      className={`inline-flex items-center gap-1 font-mono-tabular font-bold ${
+                        secondsLeft <= 5
+                          ? 'text-[#DD0000]'
+                          : 'text-neutral-800 dark:text-[#FFCE00]'
+                      }`}
+                    >
+                      <Clock size={13} />
+                      {secondsLeft}s
+                    </motion.span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8">
-          <p className="text-lg sm:text-xl font-medium text-neutral-900 dark:text-white leading-relaxed mb-5">
-            {displayPrompt}
-          </p>
-
-          {showHint && hintText && (
-            <div className="rounded-xl border border-[#FFCE00]/40 bg-[#FFCE00]/10 px-4 py-3 text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 mb-5">
-              {hintText}
-            </div>
-          )}
-
-          {currentQuestion.type === 'matching' && currentQuestion.matching_pairs && currentQuestion.matching_pairs.length > 0 ? (
-            <div className="space-y-3 mb-6">
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {t(lang, 'matchInstruction')}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  {currentQuestion.matching_pairs.map((pair, idx) => {
-                    const isSelected = selectedLeftIdx === idx;
-                    const assignedRight = matchedPairs[idx];
-                    return (
-                      <button
-                        key={pair.left}
-                        type="button"
-                        disabled={Boolean(checkedFeedback)}
-                        onClick={() => setSelectedLeftIdx(isSelected ? null : idx)}
-                        className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer min-h-[44px] flex items-center justify-between gap-2 ${
-                          isSelected
-                            ? 'border-[#DD0000] bg-[#DD0000]/8 text-neutral-900 dark:text-white'
-                            : assignedRight
-                            ? 'border-neutral-900 dark:border-[#FFCE00]/70 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white'
-                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono-tabular text-xs font-bold text-neutral-400 shrink-0">
-                            {idx + 1}.
-                          </span>
-                          <span className="break-words">{pair.left}</span>
-                        </span>
-                        {assignedRight && (
-                          <span className="text-[11px] font-mono-tabular text-[#DD0000] dark:text-[#FFCE00] shrink-0">
-                            → {shuffledRightOptions.indexOf(assignedRight) + 1}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+        {/* Main Exercise Card */}
+        <div className="relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-4 sm:p-7 lg:p-8 shadow-xs">
+          <AnimatePresence initial={false}>
+            {showHint && hintText && (
+              <motion.div
+                initial={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0, marginBottom: 0 }}
+                transition={{ duration: MOTION_DURATION.fast, ease: MOTION_EASE.settle }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-xl border border-[#FFCE00]/45 bg-[#FFCE00]/10 px-3.5 py-2.5 text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 flex items-start gap-2">
+                  <Lightbulb size={15} className="text-[#b88600] dark:text-[#FFCE00] shrink-0 mt-0.5" />
+                  <span>{hintText}</span>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                <div className="space-y-2">
-                  {shuffledRightOptions.map((rightVal, rIdx) => {
-                    const matchedLeftEntry = Object.entries(matchedPairs).find(([, v]) => v === rightVal);
-                    const matchedLeftNumber = matchedLeftEntry ? Number(matchedLeftEntry[0]) + 1 : null;
-                    return (
-                      <button
-                        key={rightVal}
-                        type="button"
-                        disabled={Boolean(checkedFeedback)}
-                        onClick={() => handleMatchRightClick(rightVal)}
-                        className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer min-h-[44px] flex items-center justify-between gap-2 ${
-                          matchedLeftNumber !== null
-                            ? 'border-neutral-900 dark:border-[#FFCE00]/70 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white'
-                            : selectedLeftIdx !== null
-                            ? 'border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:border-[#DD0000]'
-                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono-tabular text-xs font-bold text-neutral-400 shrink-0">
-                            {rIdx + 1}.
-                          </span>
-                          <span className="break-words">{rightVal}</span>
-                        </span>
-                        {matchedLeftNumber !== null && (
-                          <span className="text-[11px] font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] shrink-0">
-                            #{matchedLeftNumber}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ) : currentQuestion.options_de && currentQuestion.options_de.length > 0 ? (
-            <div className="grid grid-cols-1 gap-2.5 mb-6">
-              {currentQuestion.options_de.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  disabled={Boolean(checkedFeedback)}
-                  onClick={() => setDraftAnswer(opt)}
-                  className={`text-left px-4 py-3 rounded-xl border text-sm font-medium transition-colors cursor-pointer min-h-[44px] ${
-                    draftAnswer === opt
-                      ? 'border-[#DD0000] bg-[#DD0000]/5 text-neutral-900 dark:text-white'
-                      : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 hover:border-neutral-400'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3 mb-6">
-              {currentQuestion.type === 'sentence_construction' &&
-                currentQuestion.fragments_de &&
-                currentQuestion.fragments_de.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {t(lang, 'tapFragmentsHint')}
-                      </span>
-                      {usedFragmentIndices.length > 0 && !checkedFeedback && (
-                        <button
-                          type="button"
-                          onClick={handleResetFragments}
-                          className="text-xs font-medium text-[#DD0000] hover:underline cursor-pointer shrink-0"
-                        >
-                          {t(lang, 'resetOrderBtn')}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentQuestion.fragments_de.map((frag, fragIdx) => {
-                        const used = usedFragmentIndices.includes(fragIdx);
-                        return (
-                          <button
-                            key={`${frag}-${fragIdx}`}
-                            type="button"
-                            disabled={Boolean(checkedFeedback) || used}
-                            onClick={() => handleFragmentClick(frag, fragIdx)}
-                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors min-h-[40px] ${
-                              used
-                                ? 'border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-neutral-400 dark:text-neutral-600 cursor-default'
-                                : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white hover:border-[#DD0000] cursor-pointer'
-                            }`}
-                          >
-                            {frag}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+          <AnimatePresence mode="wait" initial={false} custom={1}>
+            <motion.div
+              key={currentQuestion.id}
+              custom={1}
+              variants={questionSlideVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              {currentQuestion.type === 'multiple_choice' && (
+                <MultipleChoiceExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
 
-              <input
-                type="text"
-                value={draftAnswer}
-                disabled={Boolean(checkedFeedback)}
-                onChange={(e) => setDraftAnswer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !checkedFeedback && draftAnswer.trim()) {
-                    e.preventDefault();
-                    handleSubmitAnswer(false, false);
-                  }
-                }}
-                placeholder={t(lang, 'answerPlaceholder')}
-                className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-[#DD0000]"
+              {currentQuestion.type === 'gap_fill' && (
+                <GapFillExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'sentence_construction' && (
+                <SentenceConstructionExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  usedFragmentIndices={usedFragmentIndices}
+                  setUsedFragmentIndices={setUsedFragmentIndices}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'translation' && (
+                <TranslationExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'matching' && (
+                <MatchingExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  shuffledRightOptions={shuffledRightOptions}
+                  selectedLeftIdx={selectedLeftIdx}
+                  setSelectedLeftIdx={setSelectedLeftIdx}
+                  matchedPairs={matchedPairs}
+                  setMatchedPairs={setMatchedPairs}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'transformation' && (
+                <TransformationExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'true_false' && (
+                <TrueFalseExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+
+              {currentQuestion.type === 'error_correction' && (
+                <ErrorCorrectionExercise
+                  question={currentQuestion}
+                  displayPrompt={displayPrompt}
+                  lang={lang}
+                  draftAnswer={draftAnswer}
+                  setDraftAnswer={setDraftAnswer}
+                  checkedFeedback={checkedFeedback}
+                  onSubmit={handleTriggerSubmit}
+                  reducedMotion={reducedMotion}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Desktop Integrated Feedback + Action Bar */}
+          <div className="relative hidden lg:block mt-6 pt-5 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+            <div className="absolute -top-3 right-2 z-10 pointer-events-none">
+              <RewardFloatingBadge
+                show={Boolean(checkedFeedback?.isCorrect && !isRetrySession)}
+                label={`✓ ${t(lang, 'correctLabel')}`}
+                tone="success"
               />
             </div>
-          )}
+            <AnimatePresence initial={false}>
+              {checkedFeedback && (
+                <motion.div
+                  initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.99 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: MOTION_DURATION.fast, ease: MOTION_EASE.settle }}
+                  className={`rounded-xl border p-4 ${
+                    checkedFeedback.isCorrect
+                      ? 'border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/35'
+                      : 'border-[#DD0000]/40 bg-[#DD0000]/[0.06] dark:bg-[#DD0000]/15'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-bold mb-1">
+                    {checkedFeedback.isCorrect ? (
+                      <motion.span
+                        initial={reducedMotion ? false : { scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        transition={MOTION_SPRING.pop}
+                        className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400"
+                      >
+                        <CheckCircle2 size={17} /> {t(lang, 'correctLabel')}
+                      </motion.span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[#DD0000] dark:text-red-300">
+                        <XCircle size={17} /> {t(lang, 'solutionLabel')}:{' '}
+                        <span className="text-neutral-900 dark:text-white">
+                          {checkedFeedback.correctAnswer}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  {checkedFeedback.explanation && (
+                    <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                      {checkedFeedback.explanation}
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {checkedFeedback ? (
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/70 p-4 mb-5">
-              <div className="flex items-center gap-2 text-sm font-semibold mb-1.5">
-                {checkedFeedback.isCorrect ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
-                    <CheckCircle2 size={16} /> {t(lang, 'correctLabel')}
+            <div className="flex items-center justify-between gap-3">
+              {!checkedFeedback ? (
+                <>
+                  <motion.button
+                    type="button"
+                    whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                    onClick={() => handleSubmitAnswer(false, true)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/70 transition-colors cursor-pointer min-h-[44px]"
+                  >
+                    {t(lang, 'skipBtn')}
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    disabled={!canSubmit}
+                    whileTap={canSubmit && !reducedMotion ? { scale: 0.97 } : undefined}
+                    onClick={handleTriggerSubmit}
+                    className="px-6 py-2.5 rounded-xl bg-[#DD0000] text-white text-sm font-semibold hover:bg-[#b80000] disabled:opacity-40 transition-colors cursor-pointer min-h-[44px]"
+                  >
+                    {t(lang, 'checkAnswerBtn')}
+                  </motion.button>
+                </>
+              ) : (
+                <motion.button
+                  type="button"
+                  whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                  onClick={() => advanceOrFinish(results)}
+                  className={`ml-auto inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer min-h-[44px] transition-colors ${
+                    checkedFeedback.isCorrect
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
+                  }`}
+                >
+                  <span>
+                    {currentIdx + 1 < questions.length
+                      ? t(lang, 'continueBtn')
+                      : t(lang, 'viewResultsBtn')}
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-[#DD0000]">
-                    <XCircle size={16} /> {t(lang, 'solutionLabel')}: {checkedFeedback.correctAnswer}
-                  </span>
-                )}
-              </div>
-              {checkedFeedback.explanation && (
-                <p className="text-sm text-neutral-600 dark:text-neutral-300">{checkedFeedback.explanation}</p>
+                  <ArrowRight size={16} />
+                </motion.button>
               )}
             </div>
-          ) : null}
+          </div>
+        </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {!checkedFeedback ? (
-              <>
+        {/* MOBILE / TABLET PERSISTENT BOTTOM ACTION BAR + FEEDBACK SHEET (Keyboard-aware & Safe-area compliant) */}
+        <div
+          className={`lg:hidden fixed left-0 right-0 z-40 border-t backdrop-blur-md transition-[background-color,border-color] ${
+            checkedFeedback
+              ? checkedFeedback.isCorrect
+                ? 'border-emerald-500/40 bg-emerald-50/98 dark:bg-[#0D1E17]/98'
+                : 'border-[#DD0000]/40 bg-red-50/98 dark:bg-[#1E1012]/98'
+              : 'border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-[#111318]/95'
+          }`}
+          style={{
+            bottom: `${keyboardOffset}px`,
+            paddingBottom: isKeyboardOpen
+              ? '0.5rem'
+              : 'max(0.625rem, env(safe-area-inset-bottom))',
+          }}
+        >
+          <div className="max-w-3xl mx-auto px-3.5 pt-2.5 space-y-2.5">
+            {checkedFeedback ? (
+              <motion.div
+                initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-2.5"
+              >
+                <div className="space-y-1 max-h-28 overflow-y-auto">
+                  <div className="flex items-start gap-2 text-sm font-bold">
+                    {checkedFeedback.isCorrect ? (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                        <CheckCircle2 size={17} className="shrink-0" />
+                        <span>{t(lang, 'correctLabel')}</span>
+                      </span>
+                    ) : (
+                      <div className="flex items-start gap-1.5 text-[#DD0000] dark:text-red-300">
+                        <XCircle size={17} className="shrink-0 mt-0.5" />
+                        <span className="leading-snug">
+                          {t(lang, 'solutionLabel')}:{' '}
+                          <span className="text-neutral-950 dark:text-white">
+                            {checkedFeedback.correctAnswer}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {checkedFeedback.explanation && (
+                    <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-snug">
+                      {checkedFeedback.explanation}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => advanceOrFinish(results)}
+                  className={`w-full min-h-[46px] rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-transform ${
+                    checkedFeedback.isCorrect
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-[#DD0000] text-white'
+                  }`}
+                >
+                  <span>
+                    {currentIdx + 1 < questions.length
+                      ? t(lang, 'continueBtn')
+                      : t(lang, 'viewResultsBtn')}
+                  </span>
+                  <ArrowRight size={16} />
+                </button>
+              </motion.div>
+            ) : (
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => handleSubmitAnswer(false, true)}
-                  className="px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer min-h-[44px]"
+                  className="px-3.5 min-h-[44px] rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs sm:text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white cursor-pointer shrink-0 whitespace-nowrap"
                 >
                   {t(lang, 'skipBtn')}
                 </button>
                 <button
                   type="button"
-                  disabled={!draftAnswer.trim()}
-                  onClick={() => handleSubmitAnswer(false, false)}
-                  className="px-6 py-2.5 rounded-lg bg-[#DD0000] text-white text-sm font-semibold hover:bg-[#b80000] disabled:opacity-40 transition-colors cursor-pointer min-h-[44px]"
+                  disabled={!canSubmit}
+                  onClick={handleTriggerSubmit}
+                  className="flex-1 min-h-[44px] px-5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] disabled:opacity-40 text-white text-sm font-bold transition-colors cursor-pointer active:scale-[0.99]"
                 >
-                  {t(lang, 'submitAnswerBtn')}
+                  {t(lang, 'checkAnswerBtn')}
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => advanceOrFinish(results)}
-                className="ml-auto px-6 py-2.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-semibold cursor-pointer min-h-[44px]"
-              >
-                {currentIdx + 1 < questions.length ? t(lang, 'nextQuestionBtn') : t(lang, 'viewResultsBtn')}
-              </button>
+              </div>
             )}
           </div>
         </div>
@@ -794,85 +1043,30 @@ export const PracticeParametersPanel: React.FC<{
   }
 
   if (stage === 'summary') {
-    const correctCount = results.filter((r) => r.isCorrect).length;
-    const accuracy = results.length > 0 ? Math.round((correctCount / results.length) * 100) : 0;
-    const mistakes = results.filter((r) => !r.isCorrect);
-    const hasCrimsonRibbon = user?.equipped?.celebration?.value === 'crimson_ribbon';
+    const contextSubtitle =
+      mode === 'general'
+        ? topicTitle || selectedTopics.join(', ') || t(lang, 'topicMixedTitle')
+        : lessonTitle || `${selectedLessons.length} ${t(lang, 'lessonsSelectedCount')}`;
 
     return (
-      <div className="max-w-3xl space-y-6">
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 overflow-hidden">
-          {hasCrimsonRibbon && (
-            <div className="-mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-6 px-6 py-3.5 bg-gradient-to-r from-black via-[#DD0000] to-black text-white border-b-2 border-[#FFCE00] flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Sparkles size={17} className="text-[#FFCE00] shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-xs font-display font-bold tracking-wide text-[#FFCE00]">
-                    {t(lang, 'crimsonRibbonBannerTitle')}
-                  </div>
-                  <div className="text-xs text-neutral-100 truncate">
-                    {t(lang, 'crimsonRibbonBannerDesc')}
-                  </div>
-                </div>
-              </div>
-              <span className="font-mono-tabular text-xs font-bold text-[#FFCE00] shrink-0">
-                {accuracy}%
-              </span>
-            </div>
-          )}
-
-          <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-2">
-            {t(lang, 'sessionCompleteTitle')}
-          </h2>
-          <div className="flex flex-wrap items-center gap-6 text-sm text-neutral-600 dark:text-neutral-300 mb-6">
-            <span className="font-mono-tabular">{t(lang, 'accuracyWord')}: {accuracy}% ({correctCount}/{results.length})</span>
-            <span className="font-mono-tabular">{t(lang, 'elapsedWord')}: {sessionElapsed}s</span>
-          </div>
-
-          {rewardSummary && (
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#FFCE00]/10 p-4 mb-6 text-sm font-medium text-neutral-900 dark:text-white">
-              {rewardSummary.queuedOffline
-                ? t(lang, 'queuedOfflineMsg')
-                : `${t(lang, 'validatedRewardsPrefix')}: +${rewardSummary.xpAwarded} XP · +${rewardSummary.coinsAwarded} ${t(lang, 'coinBalance')}`}
-            </div>
-          )}
-
-          {mistakes.length > 0 && (
-            <div className="space-y-3 mb-6">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">{t(lang, 'reviewMistakesTitle')}</h3>
-              {mistakes.map((m, i) => (
-                <div
-                  key={`${m.questionId}-${i}`}
-                  className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 text-sm space-y-1"
-                >
-                  <div className="font-medium text-neutral-900 dark:text-white">{m.prompt}</div>
-                  <div className="text-[#DD0000]">{t(lang, 'yourAnswerLabel')}: {m.userAnswer || '—'}</div>
-                  <div className="text-emerald-700 dark:text-emerald-400">{t(lang, 'solutionLabel')}: {m.correctAnswer}</div>
-                  {m.explanation && <div className="text-neutral-500 dark:text-neutral-400">{m.explanation}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setStage('configure')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#DD0000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
-            >
-              <RotateCcw size={15} />
-              <span>{t(lang, 'newSessionBtn')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setScreen('home')}
-              className="px-4 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 text-sm font-medium text-neutral-800 dark:text-neutral-200 cursor-pointer min-h-[44px]"
-            >
-              {t(lang, 'dashboardBtn')}
-            </button>
-          </div>
-        </div>
-      </div>
+      <SessionResultsView
+        results={results}
+        questions={questions}
+        sessionElapsed={sessionElapsed}
+        rewardSummary={rewardSummary}
+        isRetryPass={isRetrySession}
+        mode={mode}
+        contextSubtitle={contextSubtitle}
+        user={user}
+        lang={lang}
+        reducedMotion={reducedMotion}
+        onRetryMistakes={handleRetryMistakes}
+        onNewSession={() => {
+          setIsRetrySession(false);
+          setStage('configure');
+        }}
+        onDashboard={() => setScreen('home')}
+      />
     );
   }
 
@@ -914,9 +1108,11 @@ export const PracticeParametersPanel: React.FC<{
           {allowedTypes.map((et) => {
             const active = params.exerciseTypes.includes(et.id);
             return (
-              <button
+              <motion.button
                 key={et.id}
                 type="button"
+                whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                transition={MOTION_SPRING.snappy}
                 onClick={() => toggleType(et.id)}
                 className={`px-3 py-2.5 rounded-lg border text-xs font-medium text-left transition-colors cursor-pointer min-h-[44px] ${
                   active
@@ -925,7 +1121,7 @@ export const PracticeParametersPanel: React.FC<{
                 }`}
               >
                 {et.labels[lang]}
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -1025,14 +1221,15 @@ export const PracticeParametersPanel: React.FC<{
               max={160}
               value={customCount}
               onChange={(e) => {
-                setCustomCount(e.target.value);
-                const n = Number(e.target.value);
-                if (n >= 1 && n <= 160) {
-                  setParams((p) => ({ ...p, questionCount: n }));
+                const raw = e.target.value;
+                setCustomCount(raw);
+                const parsed = Number(raw);
+                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 160) {
+                  setParams((p) => ({ ...p, questionCount: Math.floor(parsed) }));
                 }
               }}
               placeholder={t(lang, 'customPlaceholder')}
-              className="w-20 px-2.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent text-xs font-mono-tabular text-neutral-900 dark:text-white min-h-[40px]"
+              className="w-20 px-2.5 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-xs font-mono-tabular text-neutral-900 dark:text-white min-h-[40px]"
             />
           </div>
         </div>
@@ -1041,21 +1238,32 @@ export const PracticeParametersPanel: React.FC<{
           <div className="text-sm font-semibold text-neutral-900 dark:text-white mb-2">
             {t(lang, 'questionOrderLabel')}
           </div>
-          <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 max-w-full">
-            {(['shuffled', 'sequential'] as const).map((ord) => (
-              <button
-                key={ord}
-                type="button"
-                onClick={() => setParams((p) => ({ ...p, order: ord }))}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer ${
-                  params.order === ord
-                    ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs'
-                    : 'text-neutral-600 dark:text-neutral-400'
-                }`}
-              >
-                {ord === 'shuffled' ? t(lang, 'orderShuffled') : t(lang, 'orderSequential')}
-              </button>
-            ))}
+          <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-800 p-0.5 bg-neutral-50 dark:bg-neutral-900">
+            {(['shuffled', 'sequential'] as const).map((ord) => {
+              const active = params.order === ord;
+              return (
+                <button
+                  key={ord}
+                  type="button"
+                  onClick={() => setParams((p) => ({ ...p, order: ord }))}
+                  className={`relative px-3.5 py-2 rounded-md text-xs font-medium cursor-pointer min-h-[38px] transition-colors ${
+                    active ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="params-order-pill"
+                      transition={MOTION_SPRING.snappy}
+                      className="absolute inset-0 rounded-md bg-white dark:bg-neutral-800 shadow-xs"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {ord === 'shuffled' ? t(lang, 'orderShuffled') : t(lang, 'orderSequential')}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1063,21 +1271,32 @@ export const PracticeParametersPanel: React.FC<{
           <div className="text-sm font-semibold text-neutral-900 dark:text-white mb-2">
             {t(lang, 'feedbackTimingLabel')}
           </div>
-          <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 max-w-full">
-            {(['instant', 'end'] as const).map((ft) => (
-              <button
-                key={ft}
-                type="button"
-                onClick={() => setParams((p) => ({ ...p, feedbackTiming: ft }))}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer ${
-                  params.feedbackTiming === ft
-                    ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs'
-                    : 'text-neutral-600 dark:text-neutral-400'
-                }`}
-              >
-                {ft === 'instant' ? t(lang, 'feedbackInstant') : t(lang, 'feedbackEnd')}
-              </button>
-            ))}
+          <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-800 p-0.5 bg-neutral-50 dark:bg-neutral-900">
+            {(['instant', 'end'] as const).map((fb) => {
+              const active = params.feedbackTiming === fb;
+              return (
+                <button
+                  key={fb}
+                  type="button"
+                  onClick={() => setParams((p) => ({ ...p, feedbackTiming: fb }))}
+                  className={`relative px-3.5 py-2 rounded-md text-xs font-medium cursor-pointer min-h-[38px] transition-colors ${
+                    active ? 'text-neutral-900 dark:text-white' : 'text-neutral-500'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="params-feedback-pill"
+                      transition={MOTION_SPRING.snappy}
+                      className="absolute inset-0 rounded-md bg-white dark:bg-neutral-800 shadow-xs"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {fb === 'instant' ? t(lang, 'feedbackInstant') : t(lang, 'feedbackEnd')}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1111,6 +1330,7 @@ export const PracticeParametersPanel: React.FC<{
 
 export const FlashcardEnginePanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { user, lang, isOnline, syncOfflineQueue, refreshUser, pushToast } = useApp();
+  const reducedMotion = useMotionPreference();
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [comingSoon, setComingSoon] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1201,9 +1421,21 @@ export const FlashcardEnginePanel: React.FC<{ onBack: () => void }> = ({ onBack 
   if (idx >= cards.length) {
     const hasCrimsonRibbon = user?.equipped?.celebration?.value === 'crimson_ribbon';
     return (
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 max-w-xl space-y-4 overflow-hidden">
+      <motion.div
+        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: MOTION_DURATION.normal, ease: MOTION_EASE.settle }}
+        className="relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 max-w-xl space-y-4 overflow-hidden"
+      >
+        <CelebrationBurst active={!reducedMotion && knownIds.length > 0} />
         {hasCrimsonRibbon && (
-          <div className="-mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-4 px-6 py-3 bg-gradient-to-r from-black via-[#DD0000] to-black text-white border-b-2 border-[#FFCE00] flex items-center gap-2.5">
+          <div className="relative overflow-hidden -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 mb-4 px-6 py-3 bg-gradient-to-r from-black via-[#DD0000] to-black text-white border-b-2 border-[#FFCE00] flex items-center gap-2.5">
+            {!reducedMotion && (
+              <span
+                aria-hidden="true"
+                className="sw-shimmer-once absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none"
+              />
+            )}
             <Sparkles size={16} className="text-[#FFCE00] shrink-0" />
             <span className="text-xs font-display font-bold text-[#FFCE00]">
               {t(lang, 'crimsonRibbonBannerTitle')}
@@ -1214,71 +1446,107 @@ export const FlashcardEnginePanel: React.FC<{ onBack: () => void }> = ({ onBack 
           {t(lang, 'flashcardSummaryTitle')}
         </h2>
         <div className="text-sm text-neutral-600 dark:text-neutral-300 space-y-1 font-mono-tabular">
-          <div>{t(lang, 'reviewedLabel')}: {cards.length}</div>
-          <div>{t(lang, 'knewItLabel')}: {knownIds.length}</div>
-          <div>{t(lang, 'revisitLabel')}: {unknownIds.length}</div>
+          <div>
+            {t(lang, 'reviewedLabel')}: <AnimatedNumber value={cards.length} />
+          </div>
+          <div>
+            {t(lang, 'knewItLabel')}: <AnimatedNumber value={knownIds.length} />
+          </div>
+          <div>
+            {t(lang, 'revisitLabel')}: <AnimatedNumber value={unknownIds.length} />
+          </div>
         </div>
-        <button
+        <motion.button
           type="button"
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
           onClick={onBack}
           className="px-4 py-2.5 rounded-lg bg-[#DD0000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
         >
           {t(lang, 'doneBtn')}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     );
   }
 
   const card = cards[idx];
   return (
     <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-6 sm:p-8 max-w-xl space-y-6">
-      <div className="flex items-center justify-between text-xs font-mono-tabular text-neutral-500">
-        <span>{card.deck}</span>
-        <span>
-          {idx + 1} / {cards.length}
-        </span>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-mono-tabular text-neutral-500">
+          <span>{card.deck}</span>
+          <span>
+            {idx + 1} / {cards.length}
+          </span>
+        </div>
+        <AnimatedProgressBar
+          value={idx + (revealed ? 0.5 : 0)}
+          max={Math.max(1, cards.length)}
+          trackClassName="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+          barClassName="h-full w-full rounded-full bg-[#DD0000] dark:bg-[#FFCE00]"
+          glowOnIncrease
+        />
       </div>
 
-      <div className="py-8 text-center">
-        <div className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">
-          {card.german_front}
-        </div>
-        {revealed && (
-          <div className="space-y-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-            <div className="text-lg font-medium text-[#DD0000] dark:text-[#FFCE00]">
-              {card.localized_meaning[lang] || card.localized_meaning.en || card.localized_meaning.de}
-            </div>
-            {card.example_de && (
-              <div className="text-sm text-neutral-600 dark:text-neutral-300">{card.example_de}</div>
-            )}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={card.id}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
+          transition={{ duration: MOTION_DURATION.fast, ease: MOTION_EASE.settle }}
+          className="py-8 text-center"
+        >
+          <div className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">
+            {card.german_front}
           </div>
-        )}
-      </div>
+          <AnimatePresence initial={false}>
+            {revealed && (
+              <motion.div
+                initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: MOTION_DURATION.fast, ease: MOTION_EASE.settle }}
+                className="space-y-2 pt-4 border-t border-neutral-200 dark:border-neutral-800"
+              >
+                <div className="text-lg font-medium text-[#DD0000] dark:text-[#FFCE00]">
+                  {card.localized_meaning[lang] || card.localized_meaning.en || card.localized_meaning.de}
+                </div>
+                {card.example_de && (
+                  <div className="text-sm text-neutral-600 dark:text-neutral-300">{card.example_de}</div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
 
       {!revealed ? (
-        <button
+        <motion.button
           type="button"
+          whileTap={reducedMotion ? undefined : { scale: 0.98 }}
           onClick={() => setRevealed(true)}
           className="w-full py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black text-sm font-semibold cursor-pointer min-h-[44px]"
         >
           {t(lang, 'revealMeaningBtn')}
-        </button>
+        </motion.button>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <button
+          <motion.button
             type="button"
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
             onClick={() => rateCard('unknown')}
             className="py-3 rounded-xl border border-[#DD0000] text-[#DD0000] text-sm font-semibold cursor-pointer min-h-[44px]"
           >
             {t(lang, 'didNotKnowBtn')}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
             onClick={() => rateCard('known')}
             className="py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold cursor-pointer min-h-[44px]"
           >
             {t(lang, 'knewItBtn')}
-          </button>
+          </motion.button>
         </div>
       )}
     </div>

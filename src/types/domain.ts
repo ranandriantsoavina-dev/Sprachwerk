@@ -212,12 +212,13 @@ export interface LessonPracticeSubskill {
 
 export interface Lesson {
   id: string;
-  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   unit: number;
   title_en?: string;
   title_de: string;
   topic: string;
   hasContent?: boolean;
+  hasPractice?: boolean;
   tags?: string[];
   estimated_study_minutes?: number;
   prerequisite_knowledge_i18n?: Record<InterfaceLang, string>;
@@ -288,3 +289,24 @@ export interface RegistrationCodeAudit {
   created_by_username: string | null;
   redeemed_by_username: string | null;
 }
+
+export interface PracticeResultRow {
+  questionId: string;
+  topic: string;
+  prompt: string;
+  userAnswer: string;
+  correctAnswer: string;
+  explanation: string;
+  isCorrect: boolean;
+  skipped: boolean;
+  timedOut: boolean;
+}
+
+export interface PracticeRewardSummary {
+  xpAwarded: number;
+  coinsAwarded: number;
+  dailyBonusXp?: number;
+  dailyBonusCoins?: number;
+  queuedOffline?: boolean;
+}
+

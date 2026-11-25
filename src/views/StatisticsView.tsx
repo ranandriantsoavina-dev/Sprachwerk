@@ -1,8 +1,22 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { Award, Calendar, Flame, Target, TrendingUp } from 'lucide-react';
+import {
+  AnimatedNumber,
+  AnimatedProgressBar,
+  useIsMobileViewport,
+} from '../components/motion/MotionPrimitives';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_DURATION,
+  MOTION_EASE,
+  MOTION_SPRING,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  useMotionPreference,
+} from '../lib/motion';
 
 interface FullStats {
   summary: {
@@ -42,6 +56,8 @@ interface FullStats {
 
 export const StatisticsView: React.FC = () => {
   const { lang, setScreen } = useApp();
+  const reducedMotion = useMotionPreference();
+  const isMobile = useIsMobileViewport(768);
   const [data, setData] = useState<FullStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -78,62 +94,94 @@ export const StatisticsView: React.FC = () => {
     return { iso, day: d.getDate(), hit };
   });
 
+  const containerVariants = createStaggerContainerVariants(isMobile ? 0.035 : 0.055, 0.01);
+  const kpiContainerVariants = createStaggerContainerVariants(0.04, 0.02);
+  const itemVariants = createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10);
+
   return (
-    <div className="space-y-6">
-      <div>
+    <motion.div
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+      className="space-y-6"
+    >
+      <motion.div variants={itemVariants}>
         <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white">
           {t(lang, 'statsTitle')}
         </h2>
         <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
           {t(lang, 'statsDesc')}
         </p>
-      </div>
+      </motion.div>
 
       {/* Top Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+      <motion.div variants={kpiContainerVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          variants={itemVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
             <span>{t(lang, 'totalSessions')}</span>
             <TrendingUp size={15} />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {s?.sessionsCount ?? 0}
+            <AnimatedNumber value={s?.sessionsCount ?? 0} />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={itemVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
             <span>{t(lang, 'questionsAttempted')}</span>
             <Target size={15} />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {s?.totalQuestions ?? 0}
+            <AnimatedNumber value={s?.totalQuestions ?? 0} />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={itemVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
             <span>{t(lang, 'overallAccuracy')}</span>
             <Award size={15} />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {s?.overallAccuracyPct ?? 0}%
+            <AnimatedNumber value={s?.overallAccuracyPct ?? 0} />%
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={itemVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
             <span>{t(lang, 'bestStreak')}</span>
             <Flame size={15} className="text-[#DD0000]" />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {s?.bestStreak ?? 0} {t(lang, 'daysUnit')}
+            <AnimatedNumber value={s?.bestStreak ?? 0} /> {t(lang, 'daysUnit')}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* 30-Day Study Heatmap */}
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6">
+      <motion.div
+        variants={itemVariants}
+        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6"
+      >
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
             <Calendar size={16} />
@@ -146,11 +194,19 @@ export const StatisticsView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-6 sm:grid-cols-10 lg:grid-cols-15 gap-1.5">
-          {last30Days.map((d) => (
-            <div
+          {last30Days.map((d, idx) => (
+            <motion.div
               key={d.iso}
               title={`${d.iso}: ${d.hit?.qualifying_actions ?? 0} ${t(lang, 'actionUnit')}`}
-              className={`h-9 rounded-lg border flex items-center justify-center text-[11px] font-mono-tabular ${
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: MOTION_DURATION.fast,
+                delay: reducedMotion ? 0 : idx * 0.01,
+                ease: MOTION_EASE.settle,
+              }}
+              whileHover={reducedMotion || isMobile ? undefined : { y: -1 }}
+              className={`h-9 rounded-lg border flex items-center justify-center text-[11px] font-mono-tabular transition-colors ${
                 d.hit && d.hit.qualifying_actions > 0
                   ? 'border-[#DD0000] bg-[#DD0000]/15 text-neutral-900 dark:text-white font-semibold'
                   : d.hit?.is_frozen
@@ -159,13 +215,13 @@ export const StatisticsView: React.FC = () => {
               }`}
             >
               {d.day}
-            </div>
+            </motion.div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Weak Topics & Mistake Review */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6">
           <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white mb-4">
             {t(lang, 'weakTopicsTitle')}
@@ -184,11 +240,19 @@ export const StatisticsView: React.FC = () => {
           ) : (
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {data.weakTopics.map((wt) => (
-                <div key={wt.topic} className="py-3 flex items-center justify-between text-sm">
-                  <span className="font-medium text-neutral-900 dark:text-white">{wt.topic}</span>
-                  <span className="font-mono-tabular text-xs text-[#DD0000]">
-                    {wt.accuracyPct}% ({wt.correct}/{wt.attempts})
-                  </span>
+                <div key={wt.topic} className="py-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-neutral-900 dark:text-white">{wt.topic}</span>
+                    <span className="font-mono-tabular text-xs text-[#DD0000]">
+                      {wt.accuracyPct}% ({wt.correct}/{wt.attempts})
+                    </span>
+                  </div>
+                  <AnimatedProgressBar
+                    value={wt.accuracyPct}
+                    max={100}
+                    trackClassName="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+                    barClassName="h-full w-full rounded-full bg-[#DD0000]"
+                  />
                 </div>
               ))}
             </div>
@@ -218,10 +282,13 @@ export const StatisticsView: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Reward Event Ledger */}
-      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6">
+      <motion.div
+        variants={itemVariants}
+        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6"
+      >
         <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white mb-4">
           {t(lang, 'rewardLedgerTitle')}
         </h3>
@@ -252,7 +319,7 @@ export const StatisticsView: React.FC = () => {
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

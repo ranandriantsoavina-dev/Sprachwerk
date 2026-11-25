@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { AlertCircle, CheckCircle2, KeyRound, Mail, ShieldCheck, UserPlus } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { ApiError, apiRequest } from '../lib/api';
+import {
+  MOTION_SPRING,
+  SHAKE_KEYFRAMES,
+  createSlideUpVariants,
+  shakeTransition,
+  useMotionPreference,
+} from '../lib/motion';
 import type { InterfaceLang, UserProfile } from '../types/domain';
 
 interface BootstrapStatus {
@@ -18,6 +26,7 @@ interface BootstrapStatus {
 
 export const AuthView: React.FC = () => {
   const { lang, setLangLocal, setUser, pushToast } = useApp();
+  const reducedMotion = useMotionPreference();
   const [status, setStatus] = useState<BootstrapStatus | null>(null);
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset' | 'verify' | 'bootstrap'>('login');
 
@@ -312,20 +321,31 @@ export const AuthView: React.FC = () => {
                 {t(lang, 'brandSubtitle')}
               </div>
               <div className="inline-flex rounded-lg border border-neutral-200 p-0.5 bg-white">
-                {(['fr', 'en', 'de'] as InterfaceLang[]).map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setLangLocal(code)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase cursor-pointer ${
-                      lang === code
-                        ? 'bg-black text-white'
-                        : 'text-neutral-500 hover:text-neutral-900'
-                    }`}
-                  >
-                    {code}
-                  </button>
-                ))}
+                {(['fr', 'en', 'de'] as InterfaceLang[]).map((code) => {
+                  const active = lang === code;
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setLangLocal(code)}
+                      className={`relative px-2.5 py-1 rounded-md text-xs font-semibold uppercase cursor-pointer transition-colors ${
+                        active
+                          ? 'text-white'
+                          : 'text-neutral-500 hover:text-neutral-900'
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="auth-lang-pill"
+                          transition={MOTION_SPRING.snappy}
+                          className="absolute inset-0 rounded-md bg-black"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="relative z-10">{code}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -338,396 +358,482 @@ export const AuthView: React.FC = () => {
                       ['register', t(lang, 'tabRegister')],
                       ['forgot', t(lang, 'tabForgot')],
                     ] as const
-                  ).map(([id, label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setInfoBanner(null);
-                        setMode(id);
-                      }}
-                      className={`py-2 px-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer truncate ${
-                        mode === id
-                          ? 'bg-white text-neutral-900 shadow-xs'
-                          : 'text-neutral-600 hover:text-neutral-900'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                  ).map(([id, label]) => {
+                    const active = mode === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setInfoBanner(null);
+                          setMode(id);
+                        }}
+                        className={`relative py-2 px-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer truncate ${
+                          active
+                            ? 'text-neutral-900'
+                            : 'text-neutral-600 hover:text-neutral-900'
+                        }`}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="auth-mode-pill"
+                            transition={MOTION_SPRING.snappy}
+                            className="absolute inset-0 rounded-lg bg-white shadow-xs"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="relative z-10">{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
-              {error && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-[#DD0000]/10 border border-[#DD0000]/30 text-sm text-[#DD0000]">
-                  <AlertCircle size={17} className="shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {infoBanner && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-800">
-                  <CheckCircle2 size={17} className="shrink-0 mt-0.5" />
-                  <span>{infoBanner}</span>
-                </div>
-              )}
-
-              {/* First-Run Admin Bootstrap */}
-              {mode === 'bootstrap' && (
-                <form onSubmit={handleBootstrapAdmin} className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#DD0000]">
-                    <ShieldCheck size={18} />
-                    <span>{t(lang, 'bootstrapTitle')}</span>
-                  </div>
-                  <p className="text-xs text-neutral-600 leading-relaxed">
-                    {t(lang, 'bootstrapDesc')}
-                  </p>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'username')}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="academy_admin"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                    {(usernameHasSpaces || usernameInvalidChars) && (
-                      <p className="text-xs text-[#DD0000] mt-1">{t(lang, 'usernameHint')}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'email')}
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                        {t(lang, 'password')}
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                        {t(lang, 'confirmPassword')}
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                      />
-                    </div>
-                  </div>
-
-                  {status?.adminPasscodeRequired && (
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                        {t(lang, 'adminPasscode')}
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={passcode}
-                        onChange={(e) => setPasscode(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    key={error}
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 0 }}
+                    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, x: SHAKE_KEYFRAMES }}
+                    exit={{ opacity: 0 }}
+                    transition={reducedMotion ? undefined : shakeTransition}
+                    className="flex items-start gap-2.5 p-3.5 rounded-xl bg-[#DD0000]/10 border border-[#DD0000]/30 text-sm text-[#DD0000]"
                   >
-                    {submitting ? '...' : t(lang, 'createAdminButton')}
-                  </button>
-                </form>
-              )}
+                    <AlertCircle size={17} className="shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Sign In */}
-              {mode === 'login' && (
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <h2 className="text-xl font-display font-bold text-neutral-900">
-                    {t(lang, 'signInTitle')}
-                  </h2>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'usernameOrEmail')}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="username or name@example.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'password')}
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+              <AnimatePresence>
+                {infoBanner && (
+                  <motion.div
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-800"
                   >
-                    {submitting ? '...' : t(lang, 'signInButton')}
-                  </button>
-                </form>
-              )}
+                    <CheckCircle2 size={17} className="shrink-0 mt-0.5" />
+                    <span>{infoBanner}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Registration with Single-Use Usage Code */}
-              {mode === 'register' && (
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <UserPlus size={18} className="text-[#DD0000]" />
-                    <h2 className="text-xl font-display font-bold text-neutral-900">
-                      {t(lang, 'registerTitle')}
-                    </h2>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'username')}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="lukas_berlin"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                    <p
-                      className={`text-[11px] mt-1 ${
-                        usernameHasSpaces || usernameInvalidChars
-                          ? 'text-[#DD0000]'
-                          : 'text-neutral-500'
-                      }`}
-                    >
-                      {t(lang, 'usernameHint')}
+              <AnimatePresence mode="wait" initial={false}>
+                {/* First-Run Admin Bootstrap */}
+                {mode === 'bootstrap' && (
+                  <motion.form
+                    key="auth-bootstrap"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleBootstrapAdmin}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#DD0000]">
+                      <ShieldCheck size={18} />
+                      <span>{t(lang, 'bootstrapTitle')}</span>
+                    </div>
+                    <p className="text-xs text-neutral-600 leading-relaxed">
+                      {t(lang, 'bootstrapDesc')}
                     </p>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'email')}
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="learner@example.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                        {t(lang, 'password')}
+                        {t(lang, 'username')}
                       </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                        {t(lang, 'confirmPassword')}
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'usageCode')}
-                    </label>
-                    <div className="relative">
-                      <KeyRound size={15} className="absolute left-3.5 top-3 text-neutral-400" />
                       <input
                         type="text"
                         required
-                        value={usageCode}
-                        onChange={(e) => setUsageCode(e.target.value.toUpperCase())}
-                        placeholder="SW-XXXX-XXXX-XXXX"
-                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm font-mono-tabular uppercase text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="academy_admin"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                      {(usernameHasSpaces || usernameInvalidChars) && (
+                        <p className="text-xs text-[#DD0000] mt-1">{t(lang, 'usernameHint')}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'email')}
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
                       />
                     </div>
-                    <p className="text-[11px] text-neutral-500 mt-1">
-                      {t(lang, 'usageCodeHint')}
-                    </p>
-                  </div>
 
-                  <label className="flex items-start gap-2.5 text-xs text-neutral-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={acceptTerms}
-                      onChange={(e) => setAcceptTerms(e.target.checked)}
-                      className="mt-0.5 accent-[#DD0000]"
-                    />
-                    <span>{t(lang, 'acceptTerms')}</span>
-                  </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                          {t(lang, 'password')}
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                          {t(lang, 'confirmPassword')}
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+                    {status?.adminPasscodeRequired && (
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                          {t(lang, 'adminPasscode')}
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={passcode}
+                          onChange={(e) => setPasscode(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                    )}
+
+                    <motion.button
+                      type="submit"
+                      whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+                      transition={MOTION_SPRING.snappy}
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+                    >
+                      {submitting ? '...' : t(lang, 'createAdminButton')}
+                    </motion.button>
+                  </motion.form>
+                )}
+
+                {/* Sign In */}
+                {mode === 'login' && (
+                  <motion.form
+                    key="auth-login"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleLogin}
+                    className="space-y-4"
                   >
-                    {submitting ? '...' : t(lang, 'createAccountButton')}
-                  </button>
-                </form>
-              )}
-
-              {/* Forgot Password */}
-              {mode === 'forgot' && (
-                <form onSubmit={handleForgot} className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Mail size={18} className="text-[#DD0000]" />
                     <h2 className="text-xl font-display font-bold text-neutral-900">
-                      {t(lang, 'forgotTitle')}
+                      {t(lang, 'signInTitle')}
                     </h2>
-                  </div>
-                  <p className="text-xs text-neutral-500">
-                    {t(lang, 'forgotDesc')}
-                  </p>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'email')}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'usernameOrEmail')}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="username or name@example.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'password')}
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+
+                    <motion.button
+                      type="submit"
+                      whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+                      transition={MOTION_SPRING.snappy}
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+                    >
+                      {submitting ? '...' : t(lang, 'signInButton')}
+                    </motion.button>
+                  </motion.form>
+                )}
+
+                {/* Registration with Single-Use Usage Code */}
+                {mode === 'register' && (
+                  <motion.form
+                    key="auth-register"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleRegister}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserPlus size={18} className="text-[#DD0000]" />
+                      <h2 className="text-xl font-display font-bold text-neutral-900">
+                        {t(lang, 'registerTitle')}
+                      </h2>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'username')}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="lukas_berlin"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                      <p
+                        className={`text-[11px] mt-1 ${
+                          usernameHasSpaces || usernameInvalidChars
+                            ? 'text-[#DD0000]'
+                            : 'text-neutral-500'
+                        }`}
+                      >
+                        {t(lang, 'usernameHint')}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'email')}
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="learner@example.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                          {t(lang, 'password')}
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                          {t(lang, 'confirmPassword')}
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'usageCode')}
+                      </label>
+                      <div className="relative">
+                        <KeyRound size={15} className="absolute left-3.5 top-3 text-neutral-400" />
+                        <input
+                          type="text"
+                          required
+                          value={usageCode}
+                          onChange={(e) => setUsageCode(e.target.value.toUpperCase())}
+                          placeholder="SW-XXXX-XXXX-XXXX"
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm font-mono-tabular uppercase text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                        />
+                      </div>
+                      <p className="text-[11px] text-neutral-500 mt-1">
+                        {t(lang, 'usageCodeHint')}
+                      </p>
+                    </div>
+
+                    <label className="flex items-start gap-2.5 text-xs text-neutral-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={(e) => setAcceptTerms(e.target.checked)}
+                        className="mt-0.5 accent-[#DD0000]"
+                      />
+                      <span>{t(lang, 'acceptTerms')}</span>
                     </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-xl bg-black text-white text-sm font-semibold cursor-pointer min-h-[44px]"
-                  >
-                    {submitting ? '...' : t(lang, 'sendResetButton')}
-                  </button>
-                </form>
-              )}
+                    <motion.button
+                      type="submit"
+                      whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+                      transition={MOTION_SPRING.snappy}
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px]"
+                    >
+                      {submitting ? '...' : t(lang, 'createAccountButton')}
+                    </motion.button>
+                  </motion.form>
+                )}
 
-              {/* Password Reset Completion */}
-              {mode === 'reset' && (
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <h2 className="text-xl font-display font-bold text-neutral-900">
-                    {t(lang, 'setNewPasswordTitle')}
-                  </h2>
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'newPasswordLabel')}
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      minLength={8}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-700 mb-1">
-                      {t(lang, 'confirmPassword')}
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      minLength={8}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 rounded-xl bg-[#DD0000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+                {/* Forgot Password */}
+                {mode === 'forgot' && (
+                  <motion.form
+                    key="auth-forgot"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleForgot}
+                    className="space-y-4"
                   >
-                    {t(lang, 'updatePasswordBtn')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode('login')}
-                    className="w-full text-xs text-neutral-500 hover:text-neutral-900 cursor-pointer"
-                  >
-                    {t(lang, 'backToSignIn')}
-                  </button>
-                </form>
-              )}
+                    <div className="flex items-center gap-2">
+                      <Mail size={18} className="text-[#DD0000]" />
+                      <h2 className="text-xl font-display font-bold text-neutral-900">
+                        {t(lang, 'forgotTitle')}
+                      </h2>
+                    </div>
+                    <p className="text-xs text-neutral-500">
+                      {t(lang, 'forgotDesc')}
+                    </p>
 
-              {/* Email Verification Pending View */}
-              {mode === 'verify' && (
-                <div className="space-y-4 text-center py-4">
-                  <p className="text-sm text-neutral-600">
-                    {t(lang, 'verifyingEmailText')}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setMode('login')}
-                    className="text-xs font-semibold text-[#DD0000] cursor-pointer"
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'email')}
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+
+                    <motion.button
+                      type="submit"
+                      whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+                      transition={MOTION_SPRING.snappy}
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-black text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+                    >
+                      {submitting ? '...' : t(lang, 'sendResetButton')}
+                    </motion.button>
+                  </motion.form>
+                )}
+
+                {/* Password Reset Completion */}
+                {mode === 'reset' && (
+                  <motion.form
+                    key="auth-reset"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleResetPassword}
+                    className="space-y-4"
                   >
-                    {t(lang, 'backToSignIn')}
-                  </button>
-                </div>
-              )}
+                    <h2 className="text-xl font-display font-bold text-neutral-900">
+                      {t(lang, 'setNewPasswordTitle')}
+                    </h2>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'newPasswordLabel')}
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">
+                        {t(lang, 'confirmPassword')}
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 bg-transparent text-sm text-neutral-900 focus:outline-none focus:border-[#DD0000]"
+                      />
+                    </div>
+                    <motion.button
+                      type="submit"
+                      whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+                      transition={MOTION_SPRING.snappy}
+                      disabled={submitting}
+                      className="w-full py-3 rounded-xl bg-[#DD0000] text-white text-sm font-semibold cursor-pointer min-h-[44px]"
+                    >
+                      {t(lang, 'updatePasswordBtn')}
+                    </motion.button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('login')}
+                      className="w-full text-xs text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                    >
+                      {t(lang, 'backToSignIn')}
+                    </button>
+                  </motion.form>
+                )}
+
+                {/* Email Verification Pending View */}
+                {mode === 'verify' && (
+                  <motion.div
+                    key="auth-verify"
+                    variants={createSlideUpVariants(reducedMotion, 8)}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="space-y-4 text-center py-4"
+                  >
+                    <p className="text-sm text-neutral-600">
+                      {t(lang, 'verifyingEmailText')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMode('login')}
+                      className="text-xs font-semibold text-[#DD0000] cursor-pointer"
+                    >
+                      {t(lang, 'backToSignIn')}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

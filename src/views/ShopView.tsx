@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   AlertCircle,
   Check,
   Coins,
   Flame,
+  Loader2,
   ShieldCheck,
   Snowflake,
   Sparkles,
@@ -16,9 +18,23 @@ import {
   UserBadgeIcon,
   UserBannerBackdrop,
 } from '../components/BrandMark';
+import {
+  AnimatedNumber,
+  CelebrationBurst,
+  MotionModal,
+  useIsMobileViewport,
+} from '../components/motion/MotionPrimitives';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_SPRING,
+  SHAKE_KEYFRAMES,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  shakeTransition,
+  useMotionPreference,
+} from '../lib/motion';
 import type { InterfaceLang, ShopItem, WalletTransaction } from '../types/domain';
 
 interface ShopPayload {
@@ -54,17 +70,35 @@ function formatEffectType(lang: InterfaceLang, effectType: string): string {
 
 export const ShopView: React.FC = () => {
   const { user, lang, isOnline, pushToast, refreshUser } = useApp();
+  const reducedMotion = useMotionPreference();
+  const isMobile = useIsMobileViewport(768);
   const [data, setData] = useState<ShopPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string>('all');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [purchasedItemId, setPurchasedItemId] = useState<string | null>(null);
+  const [priceShakeKey, setPriceShakeKey] = useState(0);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isUnlimitedCoins = Boolean(
     user?.role === 'admin' || user?.unlimitedCoins || data?.unlimitedCoins
   );
 
   const coinsBalance = data?.coinsBalance ?? user?.coinsBalance ?? 0;
+
+  const clearAutoClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const closeModal = () => {
+    clearAutoClose();
+    setPurchasedItemId(null);
+    setSelectedItemId(null);
+  };
 
   const loadShop = async () => {
     try {
@@ -79,17 +113,9 @@ export const ShopView: React.FC = () => {
 
   useEffect(() => {
     loadShop();
+    return () => clearAutoClose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!selectedItemId) return;
-    const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setSelectedItemId(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedItemId]);
 
   const selectedItem =
     (data?.items || []).find((it) => it.id === selectedItemId) ?? null;
@@ -103,7 +129,10 @@ export const ShopView: React.FC = () => {
       item.effectType === 'streak_freeze' &&
       (data?.streakFreezesAvailable ?? 0) >= (data?.maxStreakFreezesHeld ?? 2);
     const hasEnoughCoins = isUnlimitedCoins || coinsBalance >= item.priceCoins;
-    if (maxFreezeReached || !hasEnoughCoins) return;
+    if (maxFreezeReached || !hasEnoughCoins) {
+      setPriceShakeKey((k) => k + 1);
+      return;
+    }
 
     setBusyId(item.id);
     try {
@@ -111,10 +140,20 @@ export const ShopView: React.FC = () => {
         method: 'POST',
         body: { itemId: item.id },
       });
-      setSelectedItemId(null);
+      setPurchasedItemId(item.id);
       await Promise.all([loadShop(), refreshUser()]);
-      pushToast(`${t(lang, 'shopUnlockedToast')}: ${item.name_i18n[lang] || item.name_i18n.en}`, 'reward');
+      const itemName = item.name_i18n[lang] || item.name_i18n.en;
+      pushToast(itemName, 'reward', {
+        title: t(lang, 'purchaseSuccessTitle'),
+        deltaLabel: isUnlimitedCoins ? undefined : `-${item.priceCoins}`,
+      });
+      clearAutoClose();
+      closeTimerRef.current = setTimeout(() => {
+        setPurchasedItemId(null);
+        setSelectedItemId((cur) => (cur === item.id ? null : cur));
+      }, reducedMotion ? 350 : 750);
     } catch (err) {
+      setPriceShakeKey((k) => k + 1);
       pushToast(err instanceof Error ? err.message : 'Purchase failed.', 'error');
     } finally {
       setBusyId(null);
@@ -148,6 +187,9 @@ export const ShopView: React.FC = () => {
   const filteredItems = (data?.items || []).filter((it) =>
     category === 'all' ? true : it.category === category
   );
+
+  const gridContainerVariants = createStaggerContainerVariants(isMobile ? 0.025 : 0.035, 0.01);
+  const gridItemVariants = createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10);
 
   const renderLivePreview = (item: ShopItem) => {
     const displayName = user?.displayName || 'Sprachwerk';
@@ -328,7 +370,7 @@ export const ShopView: React.FC = () => {
         <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] shrink-0 self-start sm:self-auto">
           <Coins size={18} className="text-[#D99B00] dark:text-[#FFCE00]" />
           <span className="font-mono-tabular font-bold text-base text-neutral-900 dark:text-white">
-            {isUnlimitedCoins ? '∞' : coinsBalance}
+            {isUnlimitedCoins ? '∞' : <AnimatedNumber value={coinsBalance} />}
           </span>
           <span className="text-xs text-neutral-500">
             {isUnlimitedCoins ? t(lang, 'unlimitedCoinsLabel') : t(lang, 'coinBalance')}
@@ -338,20 +380,31 @@ export const ShopView: React.FC = () => {
 
       {/* Category Filter */}
       <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 w-fit max-w-full">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            type="button"
-            onClick={() => setCategory(cat.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-              category === cat.id
-                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const active = category === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setCategory(cat.id)}
+              className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                active
+                  ? 'text-neutral-900 dark:text-white'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              {active && (
+                <motion.span
+                  layoutId="shop-cat-pill"
+                  transition={MOTION_SPRING.snappy}
+                  className="absolute inset-0 rounded-lg bg-white dark:bg-neutral-800 shadow-xs"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="relative z-10">{cat.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
@@ -378,7 +431,13 @@ export const ShopView: React.FC = () => {
       ) : (
         <>
           {/* Mobile Compact Square Tile Grid */}
-          <div className="grid grid-cols-2 min-[340px]:grid-cols-3 gap-2.5 md:hidden">
+          <motion.div
+            key={`mobile-grid-${category}`}
+            variants={gridContainerVariants}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-2 min-[340px]:grid-cols-3 gap-2.5 md:hidden"
+          >
             {filteredItems.map((item) => {
               const name = item.name_i18n[lang] || item.name_i18n.en;
               const owned = item.ownedQuantity > 0;
@@ -387,12 +446,18 @@ export const ShopView: React.FC = () => {
                 isAnimatedCosmeticKey(item.imageKey) || isAnimatedCosmeticKey(item.effectValue);
 
               return (
-                <button
+                <motion.button
                   key={item.id}
                   type="button"
-                  onClick={() => setSelectedItemId(item.id)}
+                  variants={gridItemVariants}
+                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                  transition={MOTION_SPRING.snappy}
+                  onClick={() => {
+                    setPurchasedItemId(null);
+                    setSelectedItemId(item.id);
+                  }}
                   aria-label={`${name} — ${isUnlimitedCoins ? `0 (${item.priceCoins})` : item.priceCoins} ${t(lang, 'coinBalance')}`}
-                  className={`relative aspect-square w-full rounded-2xl border p-2.5 flex flex-col items-center justify-between text-center transition-colors cursor-pointer active:scale-[0.98] overflow-hidden ${
+                  className={`relative aspect-square w-full rounded-2xl border p-2.5 flex flex-col items-center justify-between text-center transition-colors cursor-pointer overflow-hidden ${
                     item.equipped
                       ? 'border-[#DD0000] dark:border-[#FFCE00] bg-[#DD0000]/[0.03] dark:bg-[#FFCE00]/[0.05]'
                       : owned
@@ -452,13 +517,19 @@ export const ShopView: React.FC = () => {
                     />
                     <span>{isUnlimitedCoins ? `0 (${item.priceCoins})` : item.priceCoins}</span>
                   </span>
-                </button>
+                </motion.button>
               );
             })}
-          </div>
+          </motion.div>
 
           {/* Desktop Card Grid */}
-          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <motion.div
+            key={`desktop-grid-${category}`}
+            variants={gridContainerVariants}
+            initial="initial"
+            animate="animate"
+            className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             {filteredItems.map((item) => {
               const name = item.name_i18n[lang] || item.name_i18n.en;
               const desc = item.description_i18n[lang] || item.description_i18n.en;
@@ -471,22 +542,34 @@ export const ShopView: React.FC = () => {
                 (isUnlimitedCoins || coinsBalance >= item.priceCoins);
 
               return (
-                <div
+                <motion.div
                   key={item.id}
-                  onClick={() => setSelectedItemId(item.id)}
+                  variants={gridItemVariants}
+                  whileHover={reducedMotion ? undefined : { y: -2 }}
+                  whileTap={reducedMotion ? undefined : { scale: 0.99 }}
+                  transition={MOTION_SPRING.snappy}
+                  onClick={() => {
+                    setPurchasedItemId(null);
+                    setSelectedItemId(item.id);
+                  }}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
+                      setPurchasedItemId(null);
                       setSelectedItemId(item.id);
                     }
                   }}
-                  className="rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-white dark:bg-[#12141A] p-5 flex flex-col justify-between gap-4 cursor-pointer transition-colors text-left"
+                  className={`group rounded-2xl border bg-white dark:bg-[#12141A] p-5 flex flex-col justify-between gap-4 cursor-pointer transition-colors text-left ${
+                    item.equipped
+                      ? 'border-[#DD0000]/70 dark:border-[#FFCE00]/60'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                  }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
                         <ShopItemPreview imageKey={item.imageKey} size={22} />
                       </div>
                       <div className="text-xs font-mono-tabular text-neutral-500 text-right">
@@ -515,14 +598,15 @@ export const ShopView: React.FC = () => {
                     </div>
 
                     {!item.isConsumable && owned ? (
-                      <button
+                      <motion.button
                         type="button"
+                        whileTap={reducedMotion ? undefined : { scale: 0.95 }}
                         disabled={busyId === item.id}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEquip(item);
                         }}
-                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold cursor-pointer min-h-[38px] ${
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold cursor-pointer min-h-[38px] transition-colors ${
                           item.equipped
                             ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
                             : 'border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200'
@@ -530,13 +614,15 @@ export const ShopView: React.FC = () => {
                       >
                         {item.equipped && <Check size={14} />}
                         <span>{item.equipped ? t(lang, 'unequipBtn') : t(lang, 'equipBtn')}</span>
-                      </button>
+                      </motion.button>
                     ) : (
-                      <button
+                      <motion.button
                         type="button"
+                        whileTap={reducedMotion || !canAfford ? undefined : { scale: 0.95 }}
                         disabled={!isOnline || !canAfford || busyId === item.id}
                         onClick={(e) => {
                           e.stopPropagation();
+                          setPurchasedItemId(null);
                           setSelectedItemId(item.id);
                         }}
                         className="px-4 py-2 rounded-lg bg-[#DD0000] hover:bg-[#b80000] disabled:bg-neutral-200 dark:disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors cursor-pointer min-h-[38px]"
@@ -546,13 +632,13 @@ export const ShopView: React.FC = () => {
                           : item.isConsumable && owned
                           ? `${t(lang, 'buyMoreBtn')} · ${t(lang, 'heldLabel')}: ${item.ownedQuantity})`
                           : t(lang, 'buyBtn')}
-                      </button>
+                      </motion.button>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </>
       )}
 
@@ -591,33 +677,32 @@ export const ShopView: React.FC = () => {
       </div>
 
       {/* Item Detail & Live Preview Modal / Bottom Sheet */}
-      {selectedItem && (() => {
-        const name = selectedItem.name_i18n[lang] || selectedItem.name_i18n.en;
-        const desc = selectedItem.description_i18n[lang] || selectedItem.description_i18n.en;
-        const owned = selectedItem.ownedQuantity > 0;
-        const isPermanentOwned = !selectedItem.isConsumable && owned;
-        const maxFreezeReached =
-          selectedItem.effectType === 'streak_freeze' &&
-          (data?.streakFreezesAvailable ?? 0) >= (data?.maxStreakFreezesHeld ?? 2);
-        const hasEnoughCoins = isUnlimitedCoins || coinsBalance >= selectedItem.priceCoins;
-        const coinsMissing = Math.max(0, selectedItem.priceCoins - coinsBalance);
-        const canPurchase = isOnline && hasEnoughCoins && !maxFreezeReached;
-        const animated =
-          isAnimatedCosmeticKey(selectedItem.imageKey) ||
-          isAnimatedCosmeticKey(selectedItem.effectValue);
+      <MotionModal
+        open={Boolean(selectedItem)}
+        onClose={closeModal}
+        maxWidthClass="sm:max-w-lg"
+        mobileBottomSheet
+        panelClassName="flex flex-col overflow-hidden"
+        ariaLabel={selectedItem ? selectedItem.name_i18n[lang] || selectedItem.name_i18n.en : undefined}
+      >
+        {selectedItem && (() => {
+          const name = selectedItem.name_i18n[lang] || selectedItem.name_i18n.en;
+          const desc = selectedItem.description_i18n[lang] || selectedItem.description_i18n.en;
+          const owned = selectedItem.ownedQuantity > 0;
+          const isPermanentOwned = !selectedItem.isConsumable && owned;
+          const justPurchased = purchasedItemId === selectedItem.id;
+          const maxFreezeReached =
+            selectedItem.effectType === 'streak_freeze' &&
+            (data?.streakFreezesAvailable ?? 0) >= (data?.maxStreakFreezesHeld ?? 2);
+          const hasEnoughCoins = isUnlimitedCoins || coinsBalance >= selectedItem.priceCoins;
+          const coinsMissing = Math.max(0, selectedItem.priceCoins - coinsBalance);
+          const canPurchase = isOnline && hasEnoughCoins && !maxFreezeReached;
+          const animated =
+            isAnimatedCosmeticKey(selectedItem.imageKey) ||
+            isAnimatedCosmeticKey(selectedItem.effectValue);
 
-        return (
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setSelectedItemId(null)}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="shop-detail-modal-title"
-          >
-            <div
-              className="w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
+          return (
+            <>
               {/* Mobile Sheet Handle */}
               <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden="true">
                 <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700" />
@@ -626,8 +711,9 @@ export const ShopView: React.FC = () => {
               {/* Header */}
               <div className="px-5 py-3.5 sm:py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-start justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
+                  <div className="relative w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
                     <ShopItemPreview imageKey={selectedItem.imageKey} size={22} />
+                    <CelebrationBurst active={justPurchased} />
                   </div>
                   <div className="min-w-0">
                     <div className="text-[11px] font-mono-tabular font-medium text-neutral-500 dark:text-neutral-400">
@@ -650,7 +736,7 @@ export const ShopView: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => setSelectedItemId(null)}
+                  onClick={closeModal}
                   aria-label={t(lang, 'close')}
                   className="w-9 h-9 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
                 >
@@ -671,8 +757,37 @@ export const ShopView: React.FC = () => {
                   {desc}
                 </p>
 
+                <AnimatePresence>
+                  {justPurchased && (
+                    <motion.div
+                      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={MOTION_SPRING.pop}
+                      className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                    >
+                      <Check size={15} className="shrink-0" />
+                      <span>{t(lang, 'purchaseSuccessTitle')} · {t(lang, 'purchaseSuccessDesc')}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Price & Coin Validation Bar */}
-                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-3.5 space-y-2">
+                <motion.div
+                  key={priceShakeKey}
+                  animate={priceShakeKey > 0 && !reducedMotion ? { x: SHAKE_KEYFRAMES } : undefined}
+                  transition={shakeTransition}
+                  onClick={() => {
+                    if (!isPermanentOwned && !maxFreezeReached && !hasEnoughCoins) {
+                      setPriceShakeKey((k) => k + 1);
+                    }
+                  }}
+                  className={`rounded-xl border p-3.5 space-y-2 transition-colors ${
+                    !isPermanentOwned && !maxFreezeReached && !hasEnoughCoins
+                      ? 'border-[#DD0000]/45 bg-[#DD0000]/[0.04]'
+                      : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60'
+                  }`}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-1.5 text-sm font-mono-tabular font-bold text-neutral-900 dark:text-[#FFCE00]">
                       <Coins size={16} className="text-[#D99B00] dark:text-[#FFCE00]" />
@@ -686,7 +801,7 @@ export const ShopView: React.FC = () => {
                     <div className="text-xs font-mono-tabular text-neutral-500 dark:text-neutral-400">
                       {t(lang, 'yourBalanceLabel')}:{' '}
                       <span className="font-bold text-neutral-900 dark:text-white">
-                        {isUnlimitedCoins ? '∞' : coinsBalance}
+                        {isUnlimitedCoins ? '∞' : <AnimatedNumber value={coinsBalance} />}
                       </span>
                     </div>
                   </div>
@@ -722,22 +837,33 @@ export const ShopView: React.FC = () => {
                       {t(lang, 'shopOfflineToast')}
                     </div>
                   )}
-                </div>
+                </motion.div>
               </div>
 
               {/* Footer Actions */}
               <div className="px-5 py-3.5 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-end gap-2.5 shrink-0 bg-white dark:bg-[#12141A]">
                 <button
                   type="button"
-                  onClick={() => setSelectedItemId(null)}
+                  onClick={closeModal}
                   className="px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-200 cursor-pointer min-h-[42px]"
                 >
                   {t(lang, 'close')}
                 </button>
 
-                {isPermanentOwned ? (
-                  <button
+                {justPurchased ? (
+                  <motion.div
+                    initial={reducedMotion ? false : { scale: 0.92 }}
+                    animate={{ scale: 1 }}
+                    transition={MOTION_SPRING.pop}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold min-h-[42px]"
+                  >
+                    <Check size={15} />
+                    <span>{t(lang, 'purchaseSuccessTitle')}</span>
+                  </motion.div>
+                ) : isPermanentOwned ? (
+                  <motion.button
                     type="button"
+                    whileTap={reducedMotion ? undefined : { scale: 0.97 }}
                     disabled={busyId === selectedItem.id}
                     onClick={() => handleEquip(selectedItem)}
                     className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer min-h-[42px] transition-colors ${
@@ -746,7 +872,11 @@ export const ShopView: React.FC = () => {
                         : 'bg-[#DD0000] hover:bg-[#b80000] text-white'
                     }`}
                   >
-                    {selectedItem.equipped && <Check size={14} />}
+                    {busyId === selectedItem.id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      selectedItem.equipped && <Check size={14} />
+                    )}
                     <span>
                       {busyId === selectedItem.id
                         ? t(lang, 'processingText')
@@ -754,30 +884,34 @@ export const ShopView: React.FC = () => {
                         ? t(lang, 'unequipBtn')
                         : t(lang, 'equipBtn')}
                     </span>
-                  </button>
+                  </motion.button>
                 ) : (
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={reducedMotion || !canPurchase ? undefined : { scale: 0.97 }}
                     disabled={!canPurchase || busyId === selectedItem.id}
                     onClick={() => handlePurchase(selectedItem)}
                     className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] disabled:bg-neutral-200 dark:disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors cursor-pointer min-h-[42px]"
                   >
-                    {busyId === selectedItem.id
-                      ? t(lang, 'processingText')
-                      : maxFreezeReached
-                      ? `${t(lang, 'maxHeldLabel')} (${data?.streakFreezesAvailable}/${data?.maxStreakFreezesHeld})`
-                      : !hasEnoughCoins
-                      ? t(lang, 'insufficientCoinsLabel')
-                      : selectedItem.isConsumable && owned
-                      ? `${t(lang, 'buyMoreBtn')} · ${t(lang, 'heldLabel')}: ${selectedItem.ownedQuantity})`
-                      : t(lang, 'buyBtn')}
-                  </button>
+                    {busyId === selectedItem.id && <Loader2 size={14} className="animate-spin" />}
+                    <span>
+                      {busyId === selectedItem.id
+                        ? t(lang, 'processingText')
+                        : maxFreezeReached
+                        ? `${t(lang, 'maxHeldLabel')} (${data?.streakFreezesAvailable}/${data?.maxStreakFreezesHeld})`
+                        : !hasEnoughCoins
+                        ? t(lang, 'insufficientCoinsLabel')
+                        : selectedItem.isConsumable && owned
+                        ? `${t(lang, 'buyMoreBtn')} · ${t(lang, 'heldLabel')}: ${selectedItem.ownedQuantity})`
+                        : t(lang, 'buyBtn')}
+                    </span>
+                  </motion.button>
                 )}
               </div>
-            </div>
-          </div>
-        );
-      })()}
+            </>
+          );
+        })()}
+      </MotionModal>
     </div>
   );
 };

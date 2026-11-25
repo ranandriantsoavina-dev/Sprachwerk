@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Award,
   BarChart3,
@@ -29,9 +30,22 @@ import {
   UserBannerBackdrop,
 } from '../components/BrandMark';
 import { PWAInstallButton } from '../components/PWAInstallButton';
+import {
+  CelebrationBurst,
+  MotionModal,
+  useIsMobileViewport,
+} from '../components/motion/MotionPrimitives';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_SPRING,
+  accordionVariants,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  pulseTransition,
+  useMotionPreference,
+} from '../lib/motion';
 import type { AchievementItem, InterfaceLang, ShopItem, ThemeMode } from '../types/domain';
 
 type CustomizeCategory = 'avatars' | 'frames' | 'banners' | 'badges' | 'themes';
@@ -47,12 +61,14 @@ interface SessionRow {
 
 export const ProfileSettingsView: React.FC = () => {
   const { user, lang, setLangLocal, theme, setThemeLocal, refreshUser, setUser, signOut, pushToast, setScreen } = useApp();
+  const reducedMotion = useMotionPreference();
+  const isMobile = useIsMobileViewport(768);
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [selectedLang, setSelectedLang] = useState<InterfaceLang>(lang);
   const [selectedTheme, setSelectedTheme] = useState<ThemeMode>(theme);
   const [leaderboardVisible, setLeaderboardVisible] = useState(user?.leaderboardVisible ?? true);
-  const [reducedMotion, setReducedMotion] = useState(user?.reducedMotion ?? false);
+  const [reducedMotionPref, setReducedMotionPref] = useState(user?.reducedMotion ?? false);
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
@@ -63,6 +79,8 @@ export const ProfileSettingsView: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [customizeTab, setCustomizeTab] = useState<CustomizeCategory>('avatars');
   const [equippingId, setEquippingId] = useState<string | null>(null);
+  const [claimedAchId, setClaimedAchId] = useState<string | null>(null);
+  const claimBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Security forms
   const [currentPassword, setCurrentPassword] = useState('');
@@ -86,16 +104,10 @@ export const ProfileSettingsView: React.FC = () => {
 
   useEffect(() => {
     loadExtras();
-  }, []);
-
-  useEffect(() => {
-    if (!showCustomizeModal) return;
-    const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setShowCustomizeModal(false);
+    return () => {
+      if (claimBurstTimerRef.current) clearTimeout(claimBurstTimerRef.current);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCustomizeModal]);
+  }, []);
 
   useEffect(() => {
     setSelectedLang(lang);
@@ -140,7 +152,7 @@ export const ProfileSettingsView: React.FC = () => {
           interfaceLang: selectedLang,
           theme: selectedTheme,
           leaderboardVisible,
-          reducedMotion,
+          reducedMotion: reducedMotionPref,
         },
       });
       setUser(res.user);
@@ -159,8 +171,17 @@ export const ProfileSettingsView: React.FC = () => {
       const res = await apiRequest<{ coinDelta: number }>(`/api/achievements/${ach.id}/claim`, {
         method: 'POST',
       });
+      setClaimedAchId(ach.id);
+      if (claimBurstTimerRef.current) clearTimeout(claimBurstTimerRef.current);
+      claimBurstTimerRef.current = setTimeout(() => {
+        setClaimedAchId((cur) => (cur === ach.id ? null : cur));
+      }, 950);
       await Promise.all([loadExtras(), refreshUser()]);
-      pushToast(`${t(lang, 'claimedCoinsToast')}: +${res.coinDelta} ${t(lang, 'coinBalance')}`, 'reward');
+      const achTitle = ach.name_i18n[lang] || ach.name_i18n.en;
+      pushToast(achTitle, 'reward', {
+        title: t(lang, 'achievementUnlockedTitle'),
+        deltaLabel: `+${res.coinDelta} ${t(lang, 'coinBalance')}`,
+      });
     } catch (err) {
       pushToast(err instanceof Error ? err.message : 'Could not claim achievement.', 'error');
     }
@@ -381,97 +402,106 @@ export const ProfileSettingsView: React.FC = () => {
         )}
       </section>
 
-      {showSettings && (
-        <section className="space-y-6">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-              <Settings size={17} className="text-[#DD0000] dark:text-[#FFCE00] shrink-0" />
-              <span>{t(lang, 'settingsSectionTitle')}</span>
-            </h3>
-            <button
-              type="button"
-              onClick={() => setShowSettings(false)}
-              aria-label={t(lang, 'close')}
-              className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* Profile, Inventory & Settings Form */}
-          <form
-            onSubmit={handleSavePrefs}
-            className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4"
+      <AnimatePresence initial={false}>
+        {showSettings && (
+          <motion.section
+            key="profile-settings-drawer"
+            variants={accordionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="overflow-hidden"
           >
-            <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
-              {t(lang, 'profileTitle')}
-            </h3>
-
-            <div>
-              <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                {t(lang, 'displayNameLabel')}
-              </label>
-              <input
-                type="text"
-                required
-                minLength={2}
-                maxLength={32}
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                  {t(lang, 'languageLabel')}
-                </label>
-                <select
-                  value={selectedLang}
-                  onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Settings size={17} className="text-[#DD0000] dark:text-[#FFCE00] shrink-0" />
+                  <span>{t(lang, 'settingsSectionTitle')}</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(false)}
+                  aria-label={t(lang, 'close')}
+                  className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
                 >
-                  <option value="fr">Français (fr)</option>
-                  <option value="en">English (en)</option>
-                  <option value="de">Deutsch (de)</option>
-                </select>
+                  <X size={16} />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
-                  {t(lang, 'themeLabel')}
+              {/* Profile, Inventory & Settings Form */}
+              <form
+                onSubmit={handleSavePrefs}
+                className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4"
+              >
+                <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
+                  {t(lang, 'profileTitle')}
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                    {t(lang, 'displayNameLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    minLength={2}
+                    maxLength={32}
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm text-neutral-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      {t(lang, 'languageLabel')}
+                    </label>
+                    <select
+                      value={selectedLang}
+                      onChange={(e) => setSelectedLang(e.target.value as InterfaceLang)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                    >
+                      <option value="fr">Français (fr)</option>
+                      <option value="en">English (en)</option>
+                      <option value="de">Deutsch (de)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                      {t(lang, 'themeLabel')}
+                    </label>
+                    <select
+                      value={selectedTheme}
+                      onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
+                    >
+                      <option value="light">{t(lang, 'themeLight')}</option>
+                      <option value="dark">{t(lang, 'themeDark')}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={leaderboardVisible}
+                    onChange={(e) => setLeaderboardVisible(e.target.checked)}
+                    className="accent-[#DD0000]"
+                  />
+                  <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
                 </label>
-                <select
-                  value={selectedTheme}
-                  onChange={(e) => setSelectedTheme(e.target.value as ThemeMode)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm text-neutral-900 dark:text-white"
-                >
-                  <option value="light">{t(lang, 'themeLight')}</option>
-                  <option value="dark">{t(lang, 'themeDark')}</option>
-                </select>
-              </div>
-            </div>
 
-            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={leaderboardVisible}
-                onChange={(e) => setLeaderboardVisible(e.target.checked)}
-                className="accent-[#DD0000]"
-              />
-              <span>{t(lang, 'leaderboardVisibilityLabel')}</span>
-            </label>
-
-            <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={reducedMotion}
-                onChange={(e) => setReducedMotion(e.target.checked)}
-                className="accent-[#DD0000]"
-              />
-              <span>{t(lang, 'reducedMotionLabel')}</span>
-            </label>
+                <label className="flex items-center gap-2.5 text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={reducedMotionPref}
+                    onChange={(e) => setReducedMotionPref(e.target.checked)}
+                    className="accent-[#DD0000]"
+                  />
+                  <span>{t(lang, 'reducedMotionLabel')}</span>
+                </label>
 
             <button
               type="submit"
@@ -580,34 +610,48 @@ export const ProfileSettingsView: React.FC = () => {
                 </button>
               </div>
 
-              {showDeleteConfirm && (
-                <form onSubmit={handleDeleteAccount} className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
-                    <ShieldAlert size={15} className="shrink-0" />
-                    <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="password"
-                      required
-                      placeholder={t(lang, 'deletePasswordPlaceholder')}
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer min-h-[40px]"
-                    >
-                      {t(lang, 'confirmDeleteBtn')}
-                    </button>
-                  </div>
-                </form>
-              )}
+              <AnimatePresence initial={false}>
+                {showDeleteConfirm && (
+                  <motion.form
+                    key="delete-account-confirm"
+                    variants={accordionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onSubmit={handleDeleteAccount}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 rounded-xl bg-[#DD0000]/8 border border-[#DD0000]/30 space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[#DD0000]">
+                        <ShieldAlert size={15} className="shrink-0" />
+                        <span>{t(lang, 'deleteAccountConfirmPrompt')}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          type="password"
+                          required
+                          placeholder={t(lang, 'deletePasswordPlaceholder')}
+                          value={deletePassword}
+                          onChange={(e) => setDeletePassword(e.target.value)}
+                          className="flex-1 min-w-[180px] px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-lg bg-[#DD0000] text-white text-xs font-semibold cursor-pointer min-h-[40px]"
+                        >
+                          {t(lang, 'confirmDeleteBtn')}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
             </div>
           </div>
-        </section>
-      )}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* Owned Inventory */}
       <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 space-y-4">
@@ -691,47 +735,72 @@ export const ProfileSettingsView: React.FC = () => {
           <Award size={18} className="text-[#D99B00] dark:text-[#FFCE00]" />
           <span>{t(lang, 'achievementsTitle')}</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {achievements.map((ach) => (
-            <div
-              key={ach.id}
-              className={`rounded-xl border p-4 flex flex-col justify-between gap-3 ${
-                ach.unlocked
-                  ? 'border-[#FFCE00]/60 bg-[#FFCE00]/5'
-                  : 'border-neutral-200 dark:border-neutral-800 opacity-75'
-              }`}
-            >
-              <div>
-                <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                  {ach.name_i18n[lang] || ach.name_i18n.en}
+        <motion.div
+          variants={createStaggerContainerVariants(isMobile ? 0.025 : 0.035, 0.01)}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+        >
+          {achievements.map((ach) => {
+            const claimable = ach.unlocked && !ach.claimed;
+            const justClaimed = claimedAchId === ach.id;
+            return (
+              <motion.div
+                key={ach.id}
+                variants={createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10)}
+              >
+                <motion.div
+                  animate={
+                    justClaimed && !reducedMotion
+                      ? { scale: [1, 1.03, 1] }
+                      : { scale: 1 }
+                  }
+                  transition={pulseTransition}
+                  className={`relative h-full rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
+                    claimable
+                      ? 'border-[#FFCE00] bg-[#FFCE00]/8 sw-soft-glow'
+                      : ach.unlocked
+                      ? 'border-[#FFCE00]/60 bg-[#FFCE00]/5'
+                      : 'border-neutral-200 dark:border-neutral-800 opacity-75'
+                  }`}
+                >
+                  <CelebrationBurst active={justClaimed} />
+                <div>
+                  <div className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {ach.name_i18n[lang] || ach.name_i18n.en}
+                  </div>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                    {ach.description_i18n[lang] || ach.description_i18n.en}
+                  </p>
                 </div>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-                  {ach.description_i18n[lang] || ach.description_i18n.en}
-                </p>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                <span className="inline-flex items-center gap-1 text-xs font-mono-tabular font-semibold text-neutral-800 dark:text-[#FFCE00]">
-                  <Coins size={13} /> +{ach.coinReward}
-                </span>
-                {ach.claimed ? (
-                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    {t(lang, 'claimedLabel')}
+                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <span className="inline-flex items-center gap-1 text-xs font-mono-tabular font-semibold text-neutral-800 dark:text-[#FFCE00]">
+                    <Coins size={13} /> +{ach.coinReward}
                   </span>
-                ) : ach.unlocked ? (
-                  <button
-                    type="button"
-                    onClick={() => handleClaimAchievement(ach)}
-                    className="px-2.5 py-1 rounded-lg bg-[#FFCE00] text-black text-xs font-bold cursor-pointer"
-                  >
-                    {t(lang, 'claimReward')}
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-neutral-400">{t(lang, 'lockedLabel')}</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+                  {ach.claimed ? (
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      {t(lang, 'claimedLabel')}
+                    </span>
+                  ) : ach.unlocked ? (
+                    <motion.button
+                      type="button"
+                      whileHover={reducedMotion || isMobile ? undefined : { scale: 1.03 }}
+                      whileTap={reducedMotion ? undefined : { scale: 0.94 }}
+                      transition={MOTION_SPRING.snappy}
+                      onClick={() => handleClaimAchievement(ach)}
+                      className="px-2.5 py-1 rounded-lg bg-[#FFCE00] text-black text-xs font-bold cursor-pointer"
+                    >
+                      {t(lang, 'claimReward')}
+                    </motion.button>
+                  ) : (
+                    <span className="text-[11px] text-neutral-400">{t(lang, 'lockedLabel')}</span>
+                  )}
+                </div>
+                </motion.div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </section>
 
       {/* About Webapp Footer Info */}
@@ -806,206 +875,215 @@ export const ProfileSettingsView: React.FC = () => {
       </div>
 
       {/* Profile Customization Modal */}
-      {showCustomizeModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => setShowCustomizeModal(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="customize-modal-title"
-        >
-          <div
-            className="w-full sm:max-w-2xl max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+      <MotionModal
+        open={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+        maxWidthClass="sm:max-w-2xl"
+        mobileBottomSheet
+        panelClassName="flex flex-col overflow-hidden"
+        ariaLabel={t(lang, 'customizeModalTitle')}
+      >
+        {/* Modal Header */}
+        <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-start justify-between gap-3 shrink-0">
+          <div className="min-w-0">
+            <h3
+              id="customize-modal-title"
+              className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2"
+            >
+              <Sparkles size={18} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
+              <span>{t(lang, 'customizeModalTitle')}</span>
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+              {t(lang, 'customizeModalDesc')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCustomizeModal(false)}
+            aria-label={t(lang, 'close')}
+            className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
           >
-            {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-start justify-between gap-3 shrink-0">
-              <div className="min-w-0">
-                <h3
-                  id="customize-modal-title"
-                  className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white flex items-center gap-2"
-                >
-                  <Sparkles size={18} className="text-[#D99B00] dark:text-[#FFCE00] shrink-0" />
-                  <span>{t(lang, 'customizeModalTitle')}</span>
-                </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                  {t(lang, 'customizeModalDesc')}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCustomizeModal(false)}
-                aria-label={t(lang, 'close')}
-                className="w-10 h-10 rounded-xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white shrink-0 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            <X size={18} />
+          </button>
+        </div>
 
-            {/* Live Preview Strip */}
-            <div className="px-5 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800 shrink-0 space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                {t(lang, 'livePreviewLabel')}
-              </div>
-              <div
-                className={`relative rounded-xl border p-4 overflow-hidden ${
-                  hasBanner
-                    ? 'border-neutral-800 bg-neutral-950'
-                    : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900'
-                }`}
-              >
-                <UserBannerBackdrop bannerKey={activeBanner} compact />
-                <div className="relative z-10 flex items-center gap-3.5 min-w-0">
-                  <UserAvatar
-                    displayName={user.displayName}
-                    avatarKey={user.equipped?.avatar?.value}
-                    frameKey={user.equipped?.frame?.value}
-                    size="lg"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`text-base font-display font-bold truncate ${
-                          hasBanner ? 'text-white' : 'text-neutral-900 dark:text-white'
-                        }`}
-                      >
-                        {user.displayName}
-                      </span>
-                      <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
-                    </div>
-                    <div
-                      className={`text-xs font-mono-tabular mt-0.5 ${
-                        hasBanner ? 'text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'
-                      }`}
-                    >
-                      @{user.username} · {t(lang, 'levelShort')} {user.level.level} · {user.xpTotal} XP
-                    </div>
-                  </div>
+        {/* Live Preview Strip */}
+        <div className="px-5 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800 shrink-0 space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+            {t(lang, 'livePreviewLabel')}
+          </div>
+          <motion.div
+            key={`${user.equipped?.avatar?.value || 'none'}-${user.equipped?.frame?.value || 'none'}-${activeBanner || 'none'}-${user.equipped?.badge?.value || 'none'}`}
+            initial={reducedMotion ? false : { opacity: 0.72, scale: 0.99 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={MOTION_SPRING.snappy}
+            className={`relative rounded-xl border p-4 overflow-hidden ${
+              hasBanner
+                ? 'border-neutral-800 bg-neutral-950'
+                : 'border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900'
+            }`}
+          >
+            <UserBannerBackdrop bannerKey={activeBanner} compact />
+            <div className="relative z-10 flex items-center gap-3.5 min-w-0">
+              <UserAvatar
+                displayName={user.displayName}
+                avatarKey={user.equipped?.avatar?.value}
+                frameKey={user.equipped?.frame?.value}
+                size="lg"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`text-base font-display font-bold truncate ${
+                      hasBanner ? 'text-white' : 'text-neutral-900 dark:text-white'
+                    }`}
+                  >
+                    {user.displayName}
+                  </span>
+                  <UserBadgeIcon badgeKey={user.equipped?.badge?.value} />
+                </div>
+                <div
+                  className={`text-xs font-mono-tabular mt-0.5 ${
+                    hasBanner ? 'text-neutral-200' : 'text-neutral-500 dark:text-neutral-400'
+                  }`}
+                >
+                  @{user.username} · {t(lang, 'levelShort')} {user.level.level} · {user.xpTotal} XP
                 </div>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Category Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
-                {(
-                  [
-                    { id: 'avatars', label: t(lang, 'customizeCatAvatars') },
-                    { id: 'frames', label: t(lang, 'customizeCatFrames') },
-                    { id: 'banners', label: t(lang, 'customizeCatBanners') },
-                    { id: 'badges', label: t(lang, 'customizeCatBadges') },
-                    { id: 'themes', label: t(lang, 'customizeCatThemes') },
-                  ] as Array<{ id: CustomizeCategory; label: string }>
-                ).map((tab) => {
-                  const count = filterByCustomizeCategory(tab.id).length;
-                  const active = customizeTab === tab.id;
+          {/* Category Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
+            {(
+              [
+                { id: 'avatars', label: t(lang, 'customizeCatAvatars') },
+                { id: 'frames', label: t(lang, 'customizeCatFrames') },
+                { id: 'banners', label: t(lang, 'customizeCatBanners') },
+                { id: 'badges', label: t(lang, 'customizeCatBadges') },
+                { id: 'themes', label: t(lang, 'customizeCatThemes') },
+              ] as Array<{ id: CustomizeCategory; label: string }>
+            ).map((tab) => {
+              const count = filterByCustomizeCategory(tab.id).length;
+              const active = customizeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setCustomizeTab(tab.id)}
+                  className={`relative px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer min-h-[40px] transition-colors ${
+                    active
+                      ? 'text-white dark:text-black'
+                      : 'border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400'
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="customize-cat-pill"
+                      transition={MOTION_SPRING.snappy}
+                      className="absolute inset-0 rounded-xl bg-black dark:bg-white"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {tab.label} ({count})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Category Inventory Items */}
+        <div className="p-5 overflow-y-auto flex-1">
+          {(() => {
+            const items = filterByCustomizeCategory(customizeTab);
+            if (items.length === 0) {
+              return (
+                <div className="py-10 text-center space-y-3">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    {t(lang, 'emptyCategoryMsg')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCustomizeModal(false);
+                      setScreen('shop');
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[44px]"
+                  >
+                    <ShoppingBag size={15} />
+                    <span>{t(lang, 'browseShopBtn')}</span>
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {items.map((item) => {
+                  const animated =
+                    isAnimatedCosmeticKey(item.imageKey) ||
+                    isAnimatedCosmeticKey(item.effectValue);
                   return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setCustomizeTab(tab.id)}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer min-h-[40px] transition-colors ${
-                        active
-                          ? 'bg-black dark:bg-white text-white dark:text-black'
-                          : 'border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400'
+                    <div
+                      key={item.id}
+                      className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
+                        item.equipped
+                          ? 'border-[#DD0000] bg-[#DD0000]/[0.03] dark:bg-[#FFCE00]/[0.04] dark:border-[#FFCE00]/60'
+                          : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A]'
                       }`}
                     >
-                      {tab.label} ({count})
-                    </button>
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
+                          <ShopItemPreview imageKey={item.imageKey} size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-neutral-900 dark:text-white leading-snug">
+                            {item.name_i18n[lang] || item.name_i18n.en}
+                          </div>
+                          <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
+                            {item.effectType === 'avatar'
+                              ? t(lang, 'effectAvatar')
+                              : item.effectType === 'frame'
+                              ? t(lang, 'effectFrame')
+                              : item.effectType === 'banner'
+                              ? t(lang, 'effectBanner')
+                              : item.effectType === 'badge'
+                              ? t(lang, 'effectBadge')
+                              : item.effectType === 'theme_accent'
+                              ? t(lang, 'effectThemeAccent')
+                              : t(lang, 'effectCelebration')}
+                            {animated ? ` · ${t(lang, 'animatedTierLabel')}` : ''}
+                          </div>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed">
+                            {item.description_i18n[lang] || item.description_i18n.en}
+                          </p>
+                        </div>
+                      </div>
+
+                      <motion.button
+                        type="button"
+                        whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                        disabled={equippingId === item.id}
+                        onClick={() => handleEquipToggle(item)}
+                        className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer min-h-[44px] transition-colors ${
+                          item.equipped
+                            ? 'bg-black dark:bg-white text-white dark:text-black'
+                            : 'border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white'
+                        }`}
+                      >
+                        {item.equipped && <Check size={14} />}
+                        <span>{item.equipped ? t(lang, 'unequipBtn') : t(lang, 'equipBtn')}</span>
+                      </motion.button>
+                    </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Category Inventory Items */}
-            <div className="p-5 overflow-y-auto flex-1">
-              {(() => {
-                const items = filterByCustomizeCategory(customizeTab);
-                if (items.length === 0) {
-                  return (
-                    <div className="py-10 text-center space-y-3">
-                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                        {t(lang, 'emptyCategoryMsg')}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowCustomizeModal(false);
-                          setScreen('shop');
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[44px]"
-                      >
-                        <ShoppingBag size={15} />
-                        <span>{t(lang, 'browseShopBtn')}</span>
-                      </button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {items.map((item) => {
-                      const animated =
-                        isAnimatedCosmeticKey(item.imageKey) ||
-                        isAnimatedCosmeticKey(item.effectValue);
-                      return (
-                        <div
-                          key={item.id}
-                          className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-colors ${
-                            item.equipped
-                              ? 'border-[#DD0000] bg-[#DD0000]/[0.03] dark:bg-[#FFCE00]/[0.04] dark:border-[#FFCE00]/60'
-                              : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-[#FFCE00] flex items-center justify-center shrink-0">
-                              <ShopItemPreview imageKey={item.imageKey} size={20} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm font-bold text-neutral-900 dark:text-white leading-snug">
-                                {item.name_i18n[lang] || item.name_i18n.en}
-                              </div>
-                              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                {item.effectType === 'avatar'
-                                  ? t(lang, 'effectAvatar')
-                                  : item.effectType === 'frame'
-                                  ? t(lang, 'effectFrame')
-                                  : item.effectType === 'banner'
-                                  ? t(lang, 'effectBanner')
-                                  : item.effectType === 'badge'
-                                  ? t(lang, 'effectBadge')
-                                  : item.effectType === 'theme_accent'
-                                  ? t(lang, 'effectThemeAccent')
-                                  : t(lang, 'effectCelebration')}
-                                {animated ? ` · ${t(lang, 'animatedTierLabel')}` : ''}
-                              </div>
-                              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed">
-                                {item.description_i18n[lang] || item.description_i18n.en}
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={equippingId === item.id}
-                            onClick={() => handleEquipToggle(item)}
-                            className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer min-h-[44px] transition-colors ${
-                              item.equipped
-                                ? 'bg-black dark:bg-white text-white dark:text-black'
-                                : 'border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white'
-                            }`}
-                          >
-                            {item.equipped && <Check size={14} />}
-                            <span>{item.equipped ? t(lang, 'unequipBtn') : t(lang, 'equipBtn')}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
+            );
+          })()}
         </div>
-      )}
+      </MotionModal>
     </div>
   );
 };

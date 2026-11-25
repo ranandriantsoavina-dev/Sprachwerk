@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -10,6 +11,10 @@ import {
 import type { InterfaceLang, Lesson } from '../../types/domain';
 import { t } from '../../i18n/translations';
 import { LEVEL_STRUCTURE } from '../../data/lessonsCatalog';
+import {
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+} from '../../lib/motion';
 import {
   extractPrerequisiteLinks,
   extractVocabularyItems,
@@ -253,51 +258,75 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({
     );
   }
 
+  const lessonStaggerContainer = useMemo(
+    () => createStaggerContainerVariants(0.055, 0.02),
+    []
+  );
+  const lessonStaggerItem = useMemo(
+    () => createStaggerItemVariants(reducedMotion, 10),
+    [reducedMotion]
+  );
+
   return (
     <>
-      {/* Subtle fixed reading progress hairline across top edge (zero layout space) */}
+      {/* Subtle fixed reading progress hairline across top edge (zero layout space, compositor-only scaleX) */}
       <div
         aria-hidden="true"
         className="fixed top-0 left-0 lg:left-64 right-0 h-[3px] z-30 pointer-events-none bg-transparent"
       >
         <div
-          className="h-full bg-[#DD0000] dark:bg-[#FFCE00] transition-[width] duration-150 ease-out"
-          style={{ width: `${scrollProgress}%` }}
+          className="h-full w-full bg-[#DD0000] dark:bg-[#FFCE00] transition-transform duration-150 ease-out origin-left"
+          style={{ transform: `scaleX(${scrollProgress / 100})` }}
         />
       </div>
 
       <div className="w-full min-w-0 flex items-start justify-center gap-5 xl:gap-6 2xl:gap-8">
         {/* Main Centered Reading Column (optimal reading width on desktop) */}
-        <article className="flex-1 max-w-[800px] w-full min-w-0 space-y-6">
+        <motion.article
+          key={lesson.id}
+          variants={lessonStaggerContainer}
+          initial={reducedMotion ? false : 'initial'}
+          animate="animate"
+          className="flex-1 max-w-[800px] w-full min-w-0 space-y-6"
+        >
           {/* A. Educational Lesson Header */}
-          <LessonHeader
-            lesson={lesson}
-            lang={lang}
-            levelTitle={levelMeta?.title}
-            onBack={onBackToLibrary}
-            onFilterLevel={onFilterLevel}
-            onToggleBookmark={() => onToggleBookmark(lesson)}
-            onPractice={() => onPracticeLesson(lesson.id)}
-          />
+          <motion.div variants={lessonStaggerItem}>
+            <LessonHeader
+              lesson={lesson}
+              lang={lang}
+              levelTitle={levelMeta?.title}
+              onBack={onBackToLibrary}
+              onFilterLevel={onFilterLevel}
+              onToggleBookmark={() => onToggleBookmark(lesson)}
+              onPractice={() => onPracticeLesson(lesson.id)}
+            />
+          </motion.div>
 
           {/* B. Learning Objectives Card */}
-          <LearningObjectivesCard
-            objectives={learningObjectives}
-            lang={lang}
-            introduction={introductionText}
-          />
+          <motion.div variants={lessonStaggerItem}>
+            <LearningObjectivesCard
+              objectives={learningObjectives}
+              lang={lang}
+              introduction={introductionText}
+            />
+          </motion.div>
 
           {/* C. Prerequisites Card (with clickable lesson links) */}
-          <PrerequisitesCard
-            text={prerequisiteNote}
-            linkedLessons={prereqLinks}
-            lang={lang}
-            onSelectLesson={onSelectLesson}
-          />
+          <motion.div variants={lessonStaggerItem}>
+            <PrerequisitesCard
+              text={prerequisiteNote}
+              linkedLessons={prereqLinks}
+              lang={lang}
+              onSelectLesson={onSelectLesson}
+            />
+          </motion.div>
 
           {/* D. Core Explanation (Structured Concepts, Concept Cards, Prose, Callouts) */}
           {parsedSections.length > 0 && (
-            <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-7 space-y-6 min-w-0">
+            <motion.section
+              variants={lessonStaggerItem}
+              className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-7 space-y-6 min-w-0"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                   <BookOpen size={14} className="text-[#DD0000] dark:text-[#FFCE00]" />
@@ -317,7 +346,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({
                   <ConceptSectionBlock key={sec.id} section={sec} lang={lang} />
                 ))}
               </div>
-            </section>
+            </motion.section>
           )}
 
           {/* E. Important Rules */}
@@ -488,7 +517,7 @@ export const LessonDetailView: React.FC<LessonDetailViewProps> = ({
             onMarkReviewed={() => onMarkReviewed(lesson)}
             onPractice={() => onPracticeLesson(lesson.id)}
           />
-        </article>
+        </motion.article>
 
         {/* Desktop Sticky Table of Contents Rail (visible >= 1280px; never narrows main column) */}
         <LessonDesktopTocRail

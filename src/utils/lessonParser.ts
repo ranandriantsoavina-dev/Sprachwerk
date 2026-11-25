@@ -63,7 +63,7 @@ export function extractPrerequisiteLinks(prereqText: string, allLessons: Lesson[
   };
 
   // Match ranges like A1-02 through A1-06 / A1-02 to A1-06 / A1-12 bis A1-14 / A1-12 à A1-14
-  const rangeRegex = /\b(A1|A2|B1|B2|C1)-(\d{1,2})\s+(?:to|through|bis|à|-)\s+(?:(A1|A2|B1|B2|C1)-)?(\d{1,2})\b/gi;
+  const rangeRegex = /\b(A1|A2|B1|B2|C1|C2)-(\d{1,2})\s+(?:to|through|bis|à|-)\s+(?:(A1|A2|B1|B2|C1|C2)-)?(\d{1,2})\b/gi;
   let match: RegExpExecArray | null;
   while ((match = rangeRegex.exec(prereqText)) !== null) {
     const lvlStart = match[1].toLowerCase();
@@ -78,7 +78,7 @@ export function extractPrerequisiteLinks(prereqText: string, allLessons: Lesson[
   }
 
   // Match explicit lesson codes like A1-08, A1-09
-  const singleRegex = /\b(A1|A2|B1|B2|C1)-(\d{1,2})\b/gi;
+  const singleRegex = /\b(A1|A2|B1|B2|C1|C2)-(\d{1,2})\b/gi;
   while ((match = singleRegex.exec(prereqText)) !== null) {
     const lvl = match[1].toLowerCase();
     const num = String(parseInt(match[2], 10)).padStart(2, '0');
@@ -86,7 +86,7 @@ export function extractPrerequisiteLinks(prereqText: string, allLessons: Lesson[
   }
 
   // Match shorthand like "A1-05/06"
-  const slashRegex = /\b(A1|A2|B1|B2|C1)-(\d{1,2})\/(\d{1,2})\b/gi;
+  const slashRegex = /\b(A1|A2|B1|B2|C1|C2)-(\d{1,2})\/(\d{1,2})\b/gi;
   while ((match = slashRegex.exec(prereqText)) !== null) {
     const lvl = match[1].toLowerCase();
     pushId(`${lvl}-${String(parseInt(match[2], 10)).padStart(2, '0')}`);

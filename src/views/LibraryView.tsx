@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Bookmark,
   BookmarkCheck,
@@ -8,6 +9,14 @@ import { useApp } from '../context/AppContext';
 import { LESSONS_CATALOG, LEVEL_STRUCTURE, formatLessonNumber } from '../data/lessonsCatalog';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_SPRING,
+  createSlideUpVariants,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  useMotionPreference,
+} from '../lib/motion';
+import { useIsMobileViewport } from '../components/motion/MotionPrimitives';
 import type { Lesson } from '../types/domain';
 import { LessonDetailView } from '../components/lesson/LessonDetailView';
 
@@ -23,12 +32,33 @@ export const LibraryView: React.FC = () => {
     pushToast,
   } = useApp();
 
+  const reducedMotion = useMotionPreference();
+  const isMobile = useIsMobileViewport(768);
   const [lessons, setLessons] = useState<Lesson[]>(LESSONS_CATALOG);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState('ALL');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const savedScrollYRef = useRef<number>(0);
+
+  const openLesson = (lesson: Lesson) => {
+    savedScrollYRef.current = typeof window !== 'undefined' ? window.scrollY : 0;
+    setActiveLesson(lesson);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+    }
+  };
+
+  const backToLibrary = () => {
+    setActiveLesson(null);
+    const restoreY = savedScrollYRef.current;
+    requestAnimationFrame(() => {
+      if (typeof window !== 'undefined' && restoreY > 0) {
+        window.scrollTo({ top: restoreY, behavior: 'auto' });
+      }
+    });
+  };
 
   const loadLessons = async () => {
     try {
@@ -91,36 +121,19 @@ export const LibraryView: React.FC = () => {
       );
       await refreshUser();
       await loadLessons();
-      if (res.xpAwarded > 0) {
-        pushToast(`Lesson recorded: +${res.xpAwarded} XP, +${res.coinsAwarded} coins`, 'reward');
+      if (res.xpAwarded > 0 || res.coinsAwarded > 0) {
+        const parts: string[] = [];
+        if (res.xpAwarded > 0) parts.push(`+${res.xpAwarded} XP`);
+        if (res.coinsAwarded > 0) parts.push(`+${res.coinsAwarded} ${t(lang, 'coinBalance')}`);
+        pushToast(lesson.title_de, 'reward', {
+          title: t(lang, 'lessonReviewedTitle'),
+          deltaLabel: parts.join(' · '),
+        });
       }
     } catch {
       pushToast('Could not mark lesson complete.', 'error');
     }
   };
-
-  if (activeLesson) {
-    return (
-      <LessonDetailView
-        lesson={activeLesson}
-        allLessons={lessons}
-        lang={lang}
-        reducedMotion={Boolean(user?.reducedMotion)}
-        onBackToLibrary={() => setActiveLesson(null)}
-        onFilterLevel={(lvl) => {
-          setLevelFilter(lvl);
-          setActiveLesson(null);
-        }}
-        onSelectLesson={(nextLesson) => setActiveLesson(nextLesson)}
-        onToggleBookmark={toggleBookmark}
-        onMarkReviewed={markLessonComplete}
-        onPracticeLesson={(lessonId) => {
-          setSelectedLessonIdForPractice(lessonId);
-          setScreen('lesson_practice');
-        }}
-      />
-    );
-  }
 
   const filtered = lessons.filter((l) => {
     if (levelFilter !== 'ALL' && l.level !== levelFilter) return false;
@@ -142,168 +155,248 @@ export const LibraryView: React.FC = () => {
     (section) => levelFilter === 'ALL' || section.level === levelFilter
   );
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white">
-          {t(lang, 'libraryTitle')}
-        </h2>
-        <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
-          {t(lang, 'libraryDesc')}
-        </p>
-      </div>
+  const viewVariants = createSlideUpVariants(reducedMotion, isMobile ? 6 : 10);
+  const gridContainerVariants = createStaggerContainerVariants(isMobile ? 0.02 : 0.03, 0.01);
+  const cardVariants = createStaggerItemVariants(reducedMotion, isMobile ? 6 : 10);
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 max-w-full">
-          {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1'].map((lvl) => (
-            <button
-              key={lvl}
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {activeLesson ? (
+        <motion.div
+          key="lesson-detail"
+          variants={viewVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          <LessonDetailView
+            lesson={activeLesson}
+            allLessons={lessons}
+            lang={lang}
+            reducedMotion={Boolean(user?.reducedMotion)}
+            onBackToLibrary={backToLibrary}
+            onFilterLevel={(lvl) => {
+              setLevelFilter(lvl);
+              backToLibrary();
+            }}
+            onSelectLesson={(nextLesson) => {
+              setActiveLesson(nextLesson);
+              if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+              }
+            }}
+            onToggleBookmark={toggleBookmark}
+            onMarkReviewed={markLessonComplete}
+            onPracticeLesson={(lessonId) => {
+              setSelectedLessonIdForPractice(lessonId);
+              setScreen('lesson_practice');
+            }}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="lesson-library-grid"
+          variants={viewVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="space-y-6"
+        >
+          <div>
+            <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white">
+              {t(lang, 'libraryTitle')}
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
+              {t(lang, 'libraryDesc')}
+            </p>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 max-w-full">
+              {['ALL', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => {
+                const active = levelFilter === lvl;
+                return (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setLevelFilter(lvl)}
+                    className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                      active
+                        ? 'text-neutral-900 dark:text-white'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="library-level-pill"
+                        transition={MOTION_SPRING.snappy}
+                        className="absolute inset-0 rounded-lg bg-white dark:bg-neutral-800 shadow-xs"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="relative z-10">
+                      {lvl === 'ALL' ? t(lang, 'allLevels') : lvl}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <motion.button
               type="button"
-              onClick={() => setLevelFilter(lvl)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
-                levelFilter === lvl
-                  ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs'
-                  : 'text-neutral-600 dark:text-neutral-400'
+              whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+              transition={MOTION_SPRING.snappy}
+              onClick={() => setBookmarkedOnly((b) => !b)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer min-h-[40px] transition-colors ${
+                bookmarkedOnly
+                  ? 'border-[#DD0000] bg-[#DD0000]/10 text-[#DD0000] dark:text-white'
+                  : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300'
               }`}
             >
-              {lvl === 'ALL' ? t(lang, 'allLevels') : lvl}
-            </button>
-          ))}
-        </div>
+              <Bookmark size={14} />
+              <span>{t(lang, 'bookmarkedOnly')}</span>
+            </motion.button>
 
-        <button
-          type="button"
-          onClick={() => setBookmarkedOnly((b) => !b)}
-          className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer min-h-[40px] ${
-            bookmarkedOnly
-              ? 'border-[#DD0000] bg-[#DD0000]/10 text-[#DD0000] dark:text-white'
-              : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300'
-          }`}
-        >
-          <Bookmark size={14} />
-          <span>{t(lang, 'bookmarkedOnly')}</span>
-        </button>
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={15} className="absolute left-3.5 top-3 text-neutral-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t(lang, 'searchPlaceholder')}
+                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-[#DD0000]"
+              />
+            </div>
+          </div>
 
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={15} className="absolute left-3.5 top-3 text-neutral-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t(lang, 'searchPlaceholder')}
-            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-sm text-neutral-900 dark:text-white focus:outline-none focus:border-[#DD0000]"
-          />
-        </div>
-      </div>
+          {loading && lessons.length === 0 ? (
+            <div className="h-44 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] animate-pulse" />
+          ) : filtered.length === 0 ? (
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-8 text-center space-y-3">
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                No lessons match the current filter.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLevelFilter('ALL');
+                  setBookmarkedOnly(false);
+                  setSearch('');
+                }}
+                className="px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white cursor-pointer"
+              >
+                Reset filters
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {visibleLevels.map((section) => {
+                const sectionLessons = filtered.filter((l) => l.level === section.level);
+                if (sectionLessons.length === 0) return null;
 
-      {loading && lessons.length === 0 ? (
-        <div className="h-44 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] animate-pulse" />
-      ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-8 text-center space-y-3">
-          <p className="text-sm text-neutral-600 dark:text-neutral-300">
-            No lessons match the current filter.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setLevelFilter('ALL');
-              setBookmarkedOnly(false);
-              setSearch('');
-            }}
-            className="px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white cursor-pointer"
-          >
-            Reset filters
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {visibleLevels.map((section) => {
-            const sectionLessons = filtered.filter((l) => l.level === section.level);
-            if (sectionLessons.length === 0) return null;
-
-            return (
-              <section key={section.level} className="space-y-3">
-                {/* Level Section Header */}
-                <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-black dark:bg-white text-white dark:text-black text-xs font-mono-tabular font-bold">
-                        {section.level}
-                      </span>
-                      <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white">
-                        {section.title}
-                      </h3>
-                    </div>
-                    <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 mt-1.5">
-                      {section.subtitle}
-                    </p>
-                  </div>
-                  <div className="text-xs font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] whitespace-nowrap shrink-0">
-                    {sectionLessons.length === section.lessonCount
-                      ? `${section.lessonCount} lessons`
-                      : `${sectionLessons.length} / ${section.lessonCount} lessons`}
-                  </div>
-                </div>
-
-                {/* Lessons Grid for Level */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sectionLessons.map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className="group relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 transition-colors flex items-stretch"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setActiveLesson(lesson)}
-                        className="flex-1 text-left p-4 sm:p-5 pr-11 cursor-pointer min-w-0"
-                      >
-                        <div className="flex items-center gap-2 text-xs font-mono-tabular text-neutral-500 dark:text-neutral-400 mb-1.5">
-                          <span className="font-bold text-neutral-800 dark:text-neutral-200">
-                            {formatLessonNumber(lesson.unit)}
+                return (
+                  <section key={section.level} className="space-y-3">
+                    {/* Level Section Header */}
+                    <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-black dark:bg-white text-white dark:text-black text-xs font-mono-tabular font-bold">
+                            {section.level}
                           </span>
-                          <span aria-hidden="true">·</span>
-                          <span>{lesson.level}</span>
-                          <span aria-hidden="true">·</span>
-                          {lesson.hasContent ? (
-                            <span className="font-sans font-semibold text-emerald-700 dark:text-emerald-400">
-                              {t(lang, 'lessonAvailableLabel')}
-                            </span>
-                          ) : (
-                            <span className="font-sans font-semibold text-[#DD0000] dark:text-red-400">
-                              {t(lang, 'lessonComingSoonLabel')}
-                            </span>
-                          )}
+                          <h3 className="text-base sm:text-lg font-display font-bold text-neutral-900 dark:text-white">
+                            {section.title}
+                          </h3>
                         </div>
-                        <div className="text-sm sm:text-base font-display font-bold text-neutral-900 dark:text-white break-words leading-snug">
-                          {lesson.title_de}
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleBookmark(lesson);
-                        }}
-                        title={t(lang, 'bookmarkBtn')}
-                        aria-label={t(lang, 'bookmarkBtn')}
-                        className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-neutral-400 hover:text-[#DD0000] dark:hover:text-[#FFCE00] cursor-pointer"
-                      >
-                        {lesson.progress?.bookmarked ? (
-                          <BookmarkCheck size={15} className="text-[#DD0000]" />
-                        ) : (
-                          <Bookmark size={15} />
-                        )}
-                      </button>
+                        <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 mt-1.5">
+                          {section.subtitle}
+                        </p>
+                      </div>
+                      <div className="text-xs font-mono-tabular font-semibold text-[#DD0000] dark:text-[#FFCE00] whitespace-nowrap shrink-0">
+                        {sectionLessons.length === section.lessonCount
+                          ? `${section.lessonCount} lessons`
+                          : `${sectionLessons.length} / ${section.lessonCount} lessons`}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+
+                    {/* Lessons Grid for Level */}
+                    <motion.div
+                      variants={gridContainerVariants}
+                      initial="initial"
+                      animate="animate"
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                    >
+                      {sectionLessons.map((lesson) => (
+                        <motion.div
+                          key={lesson.id}
+                          variants={cardVariants}
+                          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+                          whileTap={reducedMotion ? undefined : { scale: 0.99 }}
+                          transition={MOTION_SPRING.snappy}
+                          className="group relative rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] hover:border-[#DD0000] dark:hover:border-[#FFCE00]/70 transition-colors flex items-stretch"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openLesson(lesson)}
+                            className="flex-1 text-left p-4 sm:p-5 pr-11 cursor-pointer min-w-0"
+                          >
+                            <div className="flex items-center gap-2 text-xs font-mono-tabular text-neutral-500 dark:text-neutral-400 mb-1.5">
+                              <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                                {formatLessonNumber(lesson.unit)}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                              <span>{lesson.level}</span>
+                              <span aria-hidden="true">·</span>
+                              {lesson.hasContent ? (
+                                <span className="font-sans font-semibold text-emerald-700 dark:text-emerald-400">
+                                  {t(lang, 'lessonAvailableLabel')}
+                                </span>
+                              ) : (
+                                <span className="font-sans font-semibold text-[#DD0000] dark:text-red-400">
+                                  {t(lang, 'lessonComingSoonLabel')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm sm:text-base font-display font-bold text-neutral-900 dark:text-white break-words leading-snug">
+                              {lesson.title_de}
+                            </div>
+                          </button>
+
+                          <motion.button
+                            type="button"
+                            whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookmark(lesson);
+                            }}
+                            title={t(lang, 'bookmarkBtn')}
+                            aria-label={t(lang, 'bookmarkBtn')}
+                            className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-neutral-400 hover:text-[#DD0000] dark:hover:text-[#FFCE00] cursor-pointer"
+                          >
+                            <motion.span
+                              key={lesson.progress?.bookmarked ? 'bm-on' : 'bm-off'}
+                              initial={reducedMotion ? false : { scale: 0.72 }}
+                              animate={{ scale: 1 }}
+                              transition={MOTION_SPRING.pop}
+                              className="inline-flex"
+                            >
+                              {lesson.progress?.bookmarked ? (
+                                <BookmarkCheck size={15} className="text-[#DD0000]" />
+                              ) : (
+                                <Bookmark size={15} />
+                              )}
+                            </motion.span>
+                          </motion.button>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 };

@@ -30,6 +30,14 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Equipped shop interface theme accents (light + dark paired) */
@@ -118,6 +126,33 @@ html[data-theme-accent="gold_archive"] .sw-accent-card {
 
 .sw-anim-sweep {
   animation: sw-banner-sweep 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes sw-subtle-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.sw-shimmer-once {
+  animation: sw-subtle-shimmer 0.85s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes sw-soft-glow {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.sw-soft-glow {
+  animation: sw-soft-glow 2.2s ease-in-out infinite;
 }
 
 /* Reduced motion support for users or account preference */

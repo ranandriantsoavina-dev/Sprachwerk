@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import {
   ArrowRight,
   Award,
@@ -11,9 +12,22 @@ import {
   Trophy,
 } from 'lucide-react';
 import { UserAvatar, UserBadgeIcon, UserBannerBackdrop } from '../components/BrandMark';
+import {
+  AnimatedNumber,
+  AnimatedProgressBar,
+  useIsMobileViewport,
+} from '../components/motion/MotionPrimitives';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
+import {
+  MOTION_DURATION,
+  MOTION_EASE,
+  MOTION_SPRING,
+  createStaggerContainerVariants,
+  createStaggerItemVariants,
+  useMotionPreference,
+} from '../lib/motion';
 import type { LeaderboardEntry } from '../types/domain';
 
 interface StatsPreview {
@@ -36,6 +50,8 @@ interface StatsPreview {
 
 export const HomeView: React.FC = () => {
   const { user, lang, setScreen } = useApp();
+  const reducedMotion = useMotionPreference();
+  const isMobile = useIsMobileViewport(768);
   const [stats, setStats] = useState<StatsPreview | null>(null);
   const [nearbyRank, setNearbyRank] = useState<LeaderboardEntry[]>([]);
 
@@ -79,10 +95,20 @@ export const HomeView: React.FC = () => {
   const hasHeroBanner = Boolean(equippedBanner);
   const isUnlimitedCoins = user.role === 'admin' || Boolean(user.unlimitedCoins);
 
+  const pageContainerVariants = createStaggerContainerVariants(isMobile ? 0.04 : 0.06, 0.01);
+  const kpiContainerVariants = createStaggerContainerVariants(0.045, 0.03);
+  const sectionVariants = createStaggerItemVariants(reducedMotion, isMobile ? 6 : 12);
+
   return (
-    <div className="space-y-6 min-w-0">
+    <motion.div
+      variants={pageContainerVariants}
+      initial="initial"
+      animate="animate"
+      className="space-y-6 min-w-0"
+    >
       {/* Hero Greeting & Primary CTA */}
-      <section
+      <motion.section
+        variants={sectionVariants}
         className={`sw-accent-card relative rounded-2xl border p-5 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 sm:gap-6 min-w-0 overflow-hidden ${
           hasHeroBanner
             ? 'border-neutral-800 text-white'
@@ -137,16 +163,22 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 shrink-0">
-          <button
+          <motion.button
             type="button"
+            whileHover={reducedMotion || isMobile ? undefined : { y: -1 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+            transition={MOTION_SPRING.snappy}
             onClick={() => setScreen('general_practice')}
             className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-sm font-semibold transition-colors cursor-pointer min-h-[44px] whitespace-nowrap"
           >
             <Dumbbell size={17} />
             <span>{t(lang, 'startGeneralPractice')}</span>
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={reducedMotion || isMobile ? undefined : { y: -1 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+            transition={MOTION_SPRING.snappy}
             onClick={() => setScreen('lesson_practice')}
             className={`inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-colors cursor-pointer min-h-[44px] whitespace-nowrap ${
               hasHeroBanner
@@ -156,26 +188,39 @@ export const HomeView: React.FC = () => {
           >
             <GraduationCap size={17} />
             <span>{t(lang, 'startLessonPractice')}</span>
-          </button>
+          </motion.button>
         </div>
-      </section>
+      </motion.section>
 
       {/* Core Metric Strip: Streak, XP & Level, Coins, Accuracy */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+      <motion.section
+        variants={kpiContainerVariants}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <motion.div
+          variants={sectionVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
             <span>{t(lang, 'currentStreak')}</span>
             <Flame size={16} className="text-[#DD0000]" />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {user.currentStreak} {t(lang, 'daysUnit')}
+            <AnimatedNumber value={user.currentStreak} /> {t(lang, 'daysUnit')}
           </div>
           <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 font-mono-tabular">
             {t(lang, 'bestStreak')}: {user.bestStreak} {t(lang, 'daysUnit')}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={sectionVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
             <span>{t(lang, 'lifetimeXp')}</span>
             <span className="font-mono-tabular font-semibold text-neutral-900 dark:text-[#FFCE00]">
@@ -183,26 +228,34 @@ export const HomeView: React.FC = () => {
             </span>
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {user.xpTotal} XP
+            <AnimatedNumber value={user.xpTotal} /> XP
           </div>
-          <div className="mt-2.5 h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${goldThemeAccent ? 'bg-[#FFCE00]' : 'bg-[#DD0000]'}`}
-              style={{ width: `${user.level.progressPct}%` }}
+          <div className="mt-2.5">
+            <AnimatedProgressBar
+              value={user.level.progressPct}
+              max={100}
+              glowOnIncrease
+              trackClassName="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+              barClassName={`h-full w-full rounded-full ${goldThemeAccent ? 'bg-[#FFCE00]' : 'bg-[#DD0000]'}`}
             />
           </div>
           <div className="text-[11px] font-mono-tabular text-neutral-500 dark:text-neutral-400 mt-1">
             {user.level.xpIntoLevel}/{user.level.xpNeededForLevel} XP {t(lang, 'nextLevelProgress')}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="sw-accent-card rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={sectionVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="sw-accent-card rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
             <span>{t(lang, 'coinBalance')}</span>
             <Coins size={16} className="text-[#D99B00] dark:text-[#FFCE00]" />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white flex items-baseline gap-2">
-            <span>{isUnlimitedCoins ? '∞' : user.coinsBalance}</span>
+            <span>{isUnlimitedCoins ? '∞' : <AnimatedNumber value={user.coinsBalance} />}</span>
             {isUnlimitedCoins && (
               <span className="text-xs font-sans font-semibold text-[#D99B00] dark:text-[#FFCE00]">
                 {t(lang, 'unlimitedCoinsLabel')}
@@ -217,24 +270,29 @@ export const HomeView: React.FC = () => {
             <span>{t(lang, 'navShop')}</span>
             <ArrowRight size={12} />
           </button>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5">
+        <motion.div
+          variants={sectionVariants}
+          whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+          transition={MOTION_SPRING.snappy}
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5"
+        >
           <div className="flex items-center justify-between text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
             <span>{t(lang, 'overallAccuracy')}</span>
             <Award size={16} className="text-neutral-700 dark:text-neutral-300" />
           </div>
           <div className="text-2xl font-display font-bold font-mono-tabular text-neutral-900 dark:text-white">
-            {stats?.summary.overallAccuracyPct ?? 0}%
+            <AnimatedNumber value={stats?.summary.overallAccuracyPct ?? 0} />%
           </div>
           <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 font-mono-tabular">
             {stats?.summary.sessionsCount ?? 0} {t(lang, 'totalSessions')} · {stats?.summary.totalQuestions ?? 0} {t(lang, 'questionsShort')}
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* 14-Day Study Activity Calendar + Quick Library Access */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <motion.section variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
@@ -245,11 +303,19 @@ export const HomeView: React.FC = () => {
             </span>
           </div>
           <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-            {calendarDays.map((day) => (
-              <div
+            {calendarDays.map((day, idx) => (
+              <motion.div
                 key={day.iso}
                 title={day.iso}
-                className={`p-1.5 sm:p-2 rounded-xl border text-center ${
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{
+                  duration: MOTION_DURATION.fast,
+                  delay: reducedMotion ? 0 : idx * 0.015,
+                  ease: MOTION_EASE.settle,
+                }}
+                whileHover={reducedMotion || isMobile ? undefined : { y: -2 }}
+                className={`p-1.5 sm:p-2 rounded-xl border text-center transition-colors ${
                   day.active
                     ? 'border-[#DD0000] bg-[#DD0000]/10 text-neutral-900 dark:text-white'
                     : day.frozen
@@ -259,7 +325,7 @@ export const HomeView: React.FC = () => {
               >
                 <div className="text-[10px] uppercase truncate">{day.weekday}</div>
                 <div className="text-sm font-mono-tabular font-semibold mt-0.5">{day.dayNum}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -361,10 +427,13 @@ export const HomeView: React.FC = () => {
             </button>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Recent Practice History */}
-      <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6">
+      <motion.section
+        variants={sectionVariants}
+        className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] p-5 sm:p-6"
+      >
         <div className="flex items-center justify-between mb-4 gap-2">
           <h3 className="text-base font-display font-bold text-neutral-900 dark:text-white">
             {t(lang, 'recentActivity')}
@@ -401,7 +470,7 @@ export const HomeView: React.FC = () => {
             ))}
           </div>
         )}
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 };

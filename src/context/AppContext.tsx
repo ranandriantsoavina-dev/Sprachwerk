@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { t } from '../i18n/translations';
 import { apiRequest } from '../lib/api';
 import { getPendingOfflineEvents, removeSyncedEvents } from '../lib/offlineQueue';
@@ -11,10 +11,24 @@ import type {
   UserProfile,
 } from '../types/domain';
 
-interface ToastMessage {
+export interface ToastOptions {
+  title?: string;
+  deltaLabel?: string;
+}
+
+export interface ToastMessage {
   id: string;
   text: string;
+  title?: string;
+  deltaLabel?: string;
   tone: 'success' | 'error' | 'reward' | 'info';
+}
+
+export interface LevelUpCelebration {
+  id: string;
+  fromLevel: number;
+  toLevel: number;
+  bonusCoins: number;
 }
 
 interface AppContextValue {
@@ -34,12 +48,17 @@ interface AppContextValue {
   signOut: () => Promise<void>;
   gamificationConfig: GamificationConfig | null;
   toasts: ToastMessage[];
-  pushToast: (text: string, tone?: ToastMessage['tone']) => void;
+  pushToast: (text: string, tone?: ToastMessage['tone'], options?: ToastOptions) => void;
   dismissToast: (id: string) => void;
   selectedLessonIdForPractice: string | null;
   setSelectedLessonIdForPractice: (id: string | null) => void;
   selectedLessonIdForDetail: string | null;
   setSelectedLessonIdForDetail: (id: string | null) => void;
+  practiceSessionActive: boolean;
+  setPracticeSessionActive: (active: boolean) => void;
+  levelUpCelebration: LevelUpCelebration | null;
+  dismissLevelUpCelebration: () => void;
+  streakBurstKey: number;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -55,20 +74,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [selectedLessonIdForPractice, setSelectedLessonIdForPractice] = useState<string | null>(null);
   const [selectedLessonIdForDetail, setSelectedLessonIdForDetail] = useState<string | null>(null);
+  const [practiceSessionActive, setPracticeSessionActive] = useState(false);
+  const [levelUpCelebration, setLevelUpCelebration] = useState<LevelUpCelebration | null>(null);
+  const [streakBurstKey, setStreakBurstKey] = useState(0);
+
+  const prevSnapshotRef = useRef<{
+    id: string;
+    level: number;
+    streak: number;
+  } | null>(null);
+
+  const toastTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const isOnline = useOnlineStatus();
 
-  const pushToast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setToasts((prev) => [...prev.slice(-3), { id, text, tone }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4500);
+  const dismissToast = useCallback((id: string) => {
+    const existingTimer = toastTimersRef.current.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      toastTimersRef.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const pushToast = useCallback(
+    (text: string, tone: ToastMessage['tone'] = 'info', options?: ToastOptions) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setToasts((prev) => {
+        const deduped = prev.filter(
+          (item) => !(item.text === text && item.tone === tone && item.title === options?.title)
+        );
+        return [
+          ...deduped.slice(-2),
+          { id, text, tone, title: options?.title, deltaLabel: options?.deltaLabel },
+        ];
+      });
+      const timer = setTimeout(() => {
+        toastTimersRef.current.delete(id);
+        setToasts((prev) => prev.filter((item) => item.id !== id));
+      }, 4500);
+      toastTimersRef.current.set(id, timer);
+    },
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      toastTimersRef.current.forEach((timer) => clearTimeout(timer));
+      toastTimersRef.current.clear();
+    };
   }, []);
+
+  const dismissLevelUpCelebration = useCallback(() => {
+    setLevelUpCelebration(null);
+  }, []);
+
+  // Detect real server-verified level-up and streak increment transitions (never on initial auth load)
+  useEffect(() => {
+    if (!user) {
+      prevSnapshotRef.current = null;
+      return;
+    }
+    const prev = prevSnapshotRef.current;
+    const nextLevel = user.level.level;
+    const nextStreak = user.currentStreak;
+
+    if (!prev || prev.id !== user.id) {
+      prevSnapshotRef.current = {
+        id: user.id,
+        level: nextLevel,
+        streak: nextStreak,
+      };
+      return;
+    }
+
+    if (nextLevel > prev.level) {
+      const levelsGained = nextLevel - prev.level;
+      const perLevelBonus = gamificationConfig?.levelCoinBonus ?? 15;
+      setLevelUpCelebration({
+        id: `${Date.now()}-${nextLevel}`,
+        fromLevel: prev.level,
+        toLevel: nextLevel,
+        bonusCoins: levelsGained * perLevelBonus,
+      });
+    }
+
+    if (nextStreak > prev.streak) {
+      setStreakBurstKey((k) => k + 1);
+    }
+
+    prevSnapshotRef.current = {
+      id: user.id,
+      level: nextLevel,
+      streak: nextStreak,
+    };
+  }, [user, gamificationConfig?.levelCoinBonus]);
 
   // Sync theme/language when a user session starts
   useEffect(() => {
@@ -169,14 +269,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncOfflineQueue();
   }, [isOnline, user?.id, syncOfflineQueue]);
 
+  useEffect(() => {
+    setPracticeSessionActive(false);
+  }, [screen]);
+
   const signOut = useCallback(async () => {
     try {
       await apiRequest('/api/auth/logout', { method: 'POST' });
     } catch {
       // ignore network error on logout
     }
+    prevSnapshotRef.current = null;
+    setLevelUpCelebration(null);
     setUser(null);
     setThemeLocal('light');
+    setPracticeSessionActive(false);
     setScreen('home');
   }, []);
 
@@ -205,6 +312,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedLessonIdForPractice,
         selectedLessonIdForDetail,
         setSelectedLessonIdForDetail,
+        practiceSessionActive,
+        setPracticeSessionActive,
+        levelUpCelebration,
+        dismissLevelUpCelebration,
+        streakBurstKey,
       }}
     >
       {children}

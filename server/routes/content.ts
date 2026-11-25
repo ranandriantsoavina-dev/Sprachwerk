@@ -33,12 +33,13 @@ function readDatasetFile<T>(filename: string): T[] {
 
 export interface LessonRecord {
   id: string;
-  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   unit: number;
   title_en?: string;
   title_de: string;
   topic: string;
   hasContent?: boolean;
+  hasPractice?: boolean;
   objectives: Record<string, string>;
   explanation_i18n: Record<string, string>;
   rules: unknown[];
@@ -128,7 +129,7 @@ export function createContentRouter(db: D1Database) {
     const flashcards = readDatasetFile<FlashcardRecord>('flashcards.json');
 
     res.json({
-      plannedLessons: 180,
+      plannedLessons: 220,
       lessonsCount: lessons.length,
       questionsCount: questions.length,
       flashcardsCount: flashcards.length,
@@ -155,6 +156,14 @@ export function createContentRouter(db: D1Database) {
 
       const progressMap = new Map(progressRows.map((r) => [r.lesson_id, r]));
 
+      const questions = getQuestionsCatalog();
+      const practiceLessonIds = new Set<string>();
+      for (const question of questions) {
+        for (const lessonId of question.lesson_ids) {
+          practiceLessonIds.add(lessonId);
+        }
+      }
+
       let filtered = lessons;
       if (level && level !== 'ALL') {
         filtered = filtered.filter((l) => l.level === level);
@@ -173,10 +182,11 @@ export function createContentRouter(db: D1Database) {
 
       res.json({
         comingSoon: lessons.length === 0,
-        plannedTotal: 180,
+        plannedTotal: 220,
         totalAvailable: lessons.length,
         items: filtered.map((l) => ({
           ...l,
+          hasPractice: practiceLessonIds.has(l.id),
           progress: progressMap.get(l.id) || {
             bookmarked: 0,
             first_completed_at: null,
@@ -213,7 +223,10 @@ export function createContentRouter(db: D1Database) {
         .first();
 
       res.json({
-        lesson,
+        lesson: {
+          ...lesson,
+          hasPractice: questions.length > 0,
+        },
         availableTypes,
         availableDifficulties,
         linkedQuestionCount: questions.length,

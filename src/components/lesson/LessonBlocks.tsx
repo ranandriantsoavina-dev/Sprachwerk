@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -40,11 +41,19 @@ import type {
 import { t } from '../../i18n/translations';
 import { formatLessonNumber } from '../../data/lessonsCatalog';
 import {
+  MOTION_DURATION,
+  MOTION_EASE,
+  MOTION_SPRING,
+  accordionVariants,
+  useMotionPreference,
+} from '../../lib/motion';
+import {
   splitContrastPair,
   type ConceptCardItem,
   type ParsedExplanationSection,
   type VocabularyEntry,
 } from '../../utils/lessonParser';
+import { AnimatedProgressBar } from '../motion/MotionPrimitives';
 import {
   GrammarPatternBadge,
   GrammarTransformationText,
@@ -236,9 +245,11 @@ export const LessonHeader: React.FC<{
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
+          <motion.button
             type="button"
             onClick={onToggleBookmark}
+            whileTap={{ scale: 0.95 }}
+            transition={MOTION_SPRING.snappy}
             aria-pressed={isBookmarked}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer min-h-[40px] transition-colors ${
               isBookmarked
@@ -246,18 +257,28 @@ export const LessonHeader: React.FC<{
                 : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#12141A] text-neutral-700 dark:text-neutral-200 hover:border-neutral-400 dark:hover:border-neutral-600'
             }`}
           >
-            {isBookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+            <motion.span
+              key={isBookmarked ? 'saved' : 'unsaved'}
+              initial={{ scale: 0.75 }}
+              animate={{ scale: 1 }}
+              transition={MOTION_SPRING.pop}
+              className="inline-flex"
+            >
+              {isBookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+            </motion.span>
             <span>{t(lang, 'bookmarkBtn')}</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
             onClick={onPractice}
+            whileTap={{ scale: 0.96 }}
+            transition={MOTION_SPRING.snappy}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[40px] transition-colors shadow-xs"
           >
             <Dumbbell size={14} />
             <span>{t(lang, 'practiceLessonBtn')}</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -776,29 +797,37 @@ export const GermanExampleCard: React.FC<{
         {/* Copy & Listen Controls */}
         <div className="flex items-center gap-1 shrink-0">
           {supportsSpeech && (
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.9 }}
               onClick={() => speakGermanText(example.sentence)}
               title={t(lang, 'listenBtn')}
               aria-label={`${t(lang, 'listenBtn')}: ${example.sentence}`}
               className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-400 cursor-pointer transition-colors"
             >
               <Volume2 size={15} />
-            </button>
+            </motion.button>
           )}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.9 }}
             onClick={handleCopy}
             title={copied ? t(lang, 'copiedBtn') : t(lang, 'copyExampleBtn')}
             aria-label={copied ? t(lang, 'copiedBtn') : `${t(lang, 'copyExampleBtn')}: ${example.sentence}`}
             className="w-9 h-9 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-400 cursor-pointer transition-colors"
           >
             {copied ? (
-              <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+              <motion.span
+                initial={{ scale: 0.6 }}
+                animate={{ scale: 1 }}
+                transition={MOTION_SPRING.pop}
+              >
+                <Check size={15} className="text-emerald-600 dark:text-emerald-400" />
+              </motion.span>
             ) : (
               <Copy size={14} />
             )}
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -812,15 +841,25 @@ export const GermanExampleCard: React.FC<{
           >
             <ChevronDown
               size={13}
-              className={`transition-transform ${showNote ? 'rotate-0' : '-rotate-90'}`}
+              className={`transition-transform duration-200 ${showNote ? 'rotate-0' : '-rotate-90'}`}
             />
             <span>{showNote ? t(lang, 'hideDetailsBtn') : t(lang, 'showDetailsBtn')}</span>
           </button>
-          {showNote && (
-            <p className="mt-1 text-xs sm:text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300 break-words">
-              <GrammarTransformationText text={explanation} mode="prose" compact />
-            </p>
-          )}
+          <AnimatePresence initial={false}>
+            {showNote && (
+              <motion.div
+                variants={accordionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="overflow-hidden"
+              >
+                <p className="mt-1 text-xs sm:text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300 break-words">
+                  <GrammarTransformationText text={explanation} mode="prose" compact />
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
@@ -948,10 +987,10 @@ export const VocabularyInteractiveStrip: React.FC<{
                 </div>
                 {entry.secondary && (
                   <div
-                    className={`text-sm transition-all ${
+                    className={`text-sm transition-all duration-200 ${
                       isHidden
-                        ? 'blur-[5px] select-none opacity-60'
-                        : 'text-neutral-700 dark:text-neutral-200'
+                        ? 'blur-[5px] select-none opacity-60 scale-[0.98] origin-left'
+                        : 'text-neutral-700 dark:text-neutral-200 opacity-100 scale-100'
                     }`}
                   >
                     <GrammarTransformationText text={entry.secondary} compact />
@@ -1146,6 +1185,8 @@ export const LessonDesktopTocRail: React.FC<{
   onPractice,
   onMarkReviewed,
 }) => {
+  const reducedMotion = useMotionPreference();
+
   return (
     <div className="hidden lg:block lg:w-52 xl:w-56 2xl:w-60 shrink-0">
       <aside className="lg:fixed lg:top-14 lg:bottom-0 lg:flex lg:items-center lg:w-52 xl:w-56 2xl:w-60 pointer-events-none z-10">
@@ -1158,12 +1199,12 @@ export const LessonDesktopTocRail: React.FC<{
               {progressPct}%
             </span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-            <div
-              className="h-full bg-[#DD0000] dark:bg-[#FFCE00] transition-all duration-200"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
+          <AnimatedProgressBar
+            value={progressPct}
+            max={100}
+            trackClassName="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden"
+            barClassName="h-full w-full bg-[#DD0000] dark:bg-[#FFCE00] rounded-full"
+          />
         </div>
 
         <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3 space-y-1">
@@ -1177,42 +1218,51 @@ export const LessonDesktopTocRail: React.FC<{
                 key={item.id}
                 type="button"
                 onClick={() => onJump(item.id)}
-                className={`w-full text-left flex items-start gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                className={`relative w-full text-left flex items-start gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                   active
-                    ? 'bg-[#DD0000]/8 dark:bg-[#FFCE00]/12 text-[#DD0000] dark:text-[#FFCE00] font-semibold'
+                    ? 'text-[#DD0000] dark:text-[#FFCE00] font-semibold'
                     : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800/50'
                 }`}
               >
+                {active && (
+                  <motion.span
+                    layoutId="lesson-toc-active-pill"
+                    transition={reducedMotion ? { duration: 0.01 } : MOTION_SPRING.snappy}
+                    className="absolute inset-0 rounded-lg bg-[#DD0000]/8 dark:bg-[#FFCE00]/12"
+                  />
+                )}
                 {item.number ? (
-                  <span className="font-mono-tabular text-[11px] opacity-75 shrink-0 mt-[1px]">
+                  <span className="relative z-10 font-mono-tabular text-[11px] opacity-75 shrink-0 mt-[1px]">
                     {item.number.padStart(2, '0')}
                   </span>
                 ) : (
-                  <Table2 size={12} className="shrink-0 mt-[2px] opacity-70" />
+                  <Table2 size={12} className="relative z-10 shrink-0 mt-[2px] opacity-70" />
                 )}
-                <span className="leading-snug line-clamp-2">{item.label}</span>
+                <span className="relative z-10 leading-snug line-clamp-2">{item.label}</span>
               </button>
             );
           })}
         </div>
 
         <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3 space-y-2">
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.97 }}
             onClick={onPractice}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[38px]"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#DD0000] hover:bg-[#b80000] text-white text-xs font-semibold cursor-pointer min-h-[38px] transition-colors"
           >
             <Dumbbell size={13} />
             <span>{t(lang, 'practiceThisLessonBtn')}</span>
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.97 }}
             onClick={onMarkReviewed}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 text-neutral-800 dark:text-neutral-200 text-xs font-semibold cursor-pointer min-h-[38px]"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 text-neutral-800 dark:text-neutral-200 text-xs font-semibold cursor-pointer min-h-[38px] transition-colors"
           >
             <CheckCircle2 size={13} />
             <span>{t(lang, 'markLessonReviewedBtn')}</span>
-          </button>
+          </motion.button>
         </div>
         </div>
       </aside>

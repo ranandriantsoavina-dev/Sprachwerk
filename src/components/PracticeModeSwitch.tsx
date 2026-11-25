@@ -1,6 +1,8 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { t } from '../i18n/translations';
+import { MOTION_SPRING, useMotionPreference } from '../lib/motion';
 
 interface PracticeModeSwitchProps {
   mode: 'general' | 'lesson';
@@ -8,6 +10,7 @@ interface PracticeModeSwitchProps {
 
 export const PracticeModeSwitch: React.FC<PracticeModeSwitchProps> = ({ mode }) => {
   const { lang, setScreen } = useApp();
+  const reduced = useMotionPreference();
   const isLesson = mode === 'lesson';
 
   const handleToggle = () => {
@@ -15,12 +18,13 @@ export const PracticeModeSwitch: React.FC<PracticeModeSwitchProps> = ({ mode }) 
   };
 
   return (
-    <button
+    <motion.button
       type="button"
       role="switch"
       aria-checked={isLesson}
       aria-label={isLesson ? t(lang, 'switchToGeneralMode') : t(lang, 'switchToLessonMode')}
       onClick={handleToggle}
+      whileTap={reduced ? undefined : { scale: 0.96 }}
       className="lg:hidden inline-flex items-center gap-2 shrink-0 cursor-pointer py-1 select-none"
     >
       <span
@@ -40,12 +44,12 @@ export const PracticeModeSwitch: React.FC<PracticeModeSwitchProps> = ({ mode }) 
             : 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700'
         }`}
       >
-        <span
-          className={`inline-block h-4 w-4 rounded-full bg-white shadow-xs transition-transform ${
-            isLesson ? 'translate-x-[22px]' : 'translate-x-[3px]'
-          }`}
+        <motion.span
+          animate={{ x: isLesson ? 22 : 3 }}
+          transition={reduced ? { duration: 0.01 } : MOTION_SPRING.snappy}
+          className="inline-block h-4 w-4 rounded-full bg-white shadow-xs"
         />
       </span>
-    </button>
+    </motion.button>
   );
 };
